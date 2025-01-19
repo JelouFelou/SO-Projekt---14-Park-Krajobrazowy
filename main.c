@@ -1,31 +1,34 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include<pthread.h>
-#include<time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <semaphore.h>
+#include "header.h"
 
-#define N 100 // maksymalna ilość osób danego dnia
-#define M 10 // wielkość grupy odprowadzanej przez przewodnika
-
-void *kasjer(void *arg);
-void *przewodnik(void *arg);
-void *turysta(void *arg);
+sem_t wejscie_do_parku; // Semafor ograniczający liczbę turystów w parku
+sem_t przydzial_kasy;
+int wolna_kasa[K];
 
 int main() {
 	pthread_t kasjer_thread, przewodnik_thread, turysta_thread[N];
+	srand(time(NULL));
 	
-	// tworzenie wątków
-	pthread_create(&kasjer_thread, NULL, kasjer, NULL);
-	pthread_create(&przewodnik_thread, NULL, przewodnik, NULL);
-	for (int i = 0; i < N; i++) {
-		pthread_create(&turysta_thread[i], NULL, turysta, (void *)(long)i);
+	sem_init(&wejscie_do_parku,0,LIMIT);
+	
+	printf("Testowa symulacja wchodzenia turystów do parku\n");
+	
+	// tworzenie turystów
+	for (int i = 1; i < (N+1); i++) {
+		sem_wait(&wejscie_do_parku);
+		pthread_create(&turysta_thread[i], NULL, turysta, i);
+		usleep((rand() % 1000 + 500) * 1000);
 	}
 	
-	// dołączanie wątków
-	pthread_join(kasjer_thread, NULL);
-	pthread_join(przewodnik_thread, NULL);
+	// dołączanie wątków turystów
 	for (int i = 0; i < N; i++) {
 		pthread_join(turysta_thread[i], NULL);
 	}
 	
+	sem_destroy(&wejscie_do_parku);
+	printf("Poprawne zakończenie symulacji\n");
 	return 0;
 }
