@@ -7,8 +7,6 @@
 //#define M 10 // wielkość grupy odprowadzanej przez przewodnika
 //#define P 4 // liczba przewodników
 
-extern int id_turysty[K]; // Tablica przechowująca ID turysty
-
 void *turysta(void *arg);
 void *kasjer(void *arg);
 //void *przewodnik(void *arg);
