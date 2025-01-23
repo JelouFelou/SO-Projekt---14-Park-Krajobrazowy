@@ -16,19 +16,13 @@ extern sem_t semafor_turysta[K];
 extern pthread_mutex_t mutex_kasy; 
 
 //nowy
+extern int grupa_aktywowana[P];
+extern int przypisz_trase[P];
+extern int grupa[P];
+extern int oprowadza[P];
+extern sem_t semafor_grupa[P];
 extern sem_t semafor_przewodnik[P];
-extern sem_t semafor_w_trasie[P];
-extern sem_t semafor_trasa[P];
-extern pthread_mutex_t mutex_przewodnika;
-extern pthread_mutex_t mutex_trasa_1;
-extern pthread_mutex_t mutex_trasa_2;
-extern int wolny_przewodnik[P];
-extern int przewodnik_stan[P];
-extern int bilety_przewodnik[P];
-extern int trasa_1[M];
-extern int trasa_2[M];
-extern int licznik_trasa_1;
-extern int licznik_trasa_2;
+extern pthread_mutex_t mutex_grupa; 
 
 void *turysta(void *arg) {
 	int id_turysta = *(int *)arg;
@@ -51,6 +45,7 @@ void *turysta(void *arg) {
 		printf(">> [Turysta %d] Zmierza do kasy...\n", id_turysta);
 		sleep((rand() % 15) + 1); // Temp zmierzanie w stronę kasy
 		
+		/*
 		while(!kupiono_bilet){ // kasjer.c
 			// Przeszukiwanie kas w poszukiwaniu wolnej
 			for(int i=0;i<K;i++){
@@ -83,50 +78,38 @@ void *turysta(void *arg) {
 			}
 			usleep(1000);
 		}	
-		
+		*/
+		pthread_mutex_lock(&mutex_grupa);
 		for(int i=0;i<P;i++){ // przewodnik.c
-			pthread_mutex_lock(&mutex_przewodnika);
-				if(wolny_przewodnik[i]){
-					if(!przewodnik_stan[i]){ // sprawdzamy czy przewodnik ma przypisaną trasę
-						bilety_przewodnik[i] = typ_trasy; // przypisuje trasę do przewodnika
-						sem_post(&semafor_przewodnik[i]); // budzi przewodnika
-						przewodnik_stan[i]=1; // przewodnik jest aktywny
-						printf(RED "INFORMACJA: PRZEWODNIK[&d] UAKTYWNIONY\n" RESET);
-					}else{
-						printf(GRN "INFORMACJA: PRZEWODNIK[&d] JEST JUŻ AKTYWNY\n" RESET);
-					}
-					pthread_mutex_unlock(&mutex_przewodnika);
-					
-					switch(typ_trasy){ //zmierzanie do odpowiedniej trasy
-						case 1:
-							pthread_mutex_lock(&mutex_trasa_1);
-							trasa_1[licznik_trasa_1++] = id_turysta;
-							
-							if (licznik_trasa_1 == M) {
-								wolny_przewodnik[i]=0;
-								sem_post(&semafor_trasa[i]); // Grupa trasy 1 gotowa
-								sem_wait(&semafor_w_trasie[i]); // Turysta w trasie
-							}
-							pthread_mutex_unlock(&mutex_trasa_1);
-							break;
-						case 2:
-							pthread_mutex_lock(&mutex_trasa_2);
-							trasa_2[licznik_trasa_2++] = id_turysta;
-							
-							if (licznik_trasa_2 == M) {
-								wolny_przewodnik[i]=0;
-								sem_post(&semafor_trasa[i]); // Grupa trasy 2 gotowa
-								sem_wait(&semafor_w_trasie[i]); // Turysta w trasie
-							}
-							pthread_mutex_unlock(&mutex_trasa_2);
-							break;
-					}
-					break;
+			if(!grupa_aktywowana[i]){ 
+			//jeżeli grupa nie była aktywowana
+				grupa_aktywowana[i] = 1; //aktywujemy
+				przypisz_trase[i] = typ_trasy; //przypisujemy trasę grupy
+				grupa[i]++; //dodajemy osobę
+				
+				printf(RED"[Grupa: %d][Turysta %d] Dołączył do grupy trasy %d. Licznik: %d/%d\n"RESET,i+1, id_turysta, typ_trasy, grupa[i], M);
+				pthread_mutex_unlock(&mutex_grupa); //zwalniamy mutex umożliwiając resztę przypisanie
+				sem_wait(&semafor_grupa[i]); //czekamy na sygnał przewodnika
+				break;
+			} 
+			else if((przypisz_trase[i]==typ_trasy) && grupa[i] < M  && !oprowadza[i]){
+			//jeżeli grupa BYŁA aktywowana, ilość osób jest mniejsza niż M i nie oprowadza
+				grupa[i]++; //dodajemy osobę
+				printf(RED"[Grupa: %d][Turysta %d] Dołączył do grupy trasy %d. Licznik: %d/%d\n"RESET,i+1, id_turysta, typ_trasy, grupa[i], M);
+				if(grupa[i] == M){ //sprawdzamy ilość osób
+					oprowadza[i]=1; //jak tak to oprowadza włączamy uniemożliwiając wejście do grupy
+					pthread_mutex_unlock(&mutex_grupa); //zwalniamy mutex umożliwiając resztę przypisanie do innych grup
+					sem_post(&semafor_przewodnik[i]); //budzimy przewodnika
+					sem_wait(&semafor_grupa[i]); //czekamy na sygnał przewodnika
+				}else{
+					pthread_mutex_unlock(&mutex_grupa); //jak if nie zgadza się to zwalniamy mutex
+					sem_wait(&semafor_grupa[i]); //czekamy na sygnał przewodnika
 				}
+				break;
 			}
 		}
-
-	sleep(czas_temp);
+	}
+	//sleep(czas_temp);
 	printf("----- [Turysta %d] Kończy wizytę w parku -----\n", id_turysta);
 	
 	sem_post(&wejscie_do_parku);

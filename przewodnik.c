@@ -5,44 +5,38 @@
 #include <stdlib.h>
 #include "header.h"
 
+extern int grupa_aktywowana[P];
+extern int przypisz_trase[P];
+extern int grupa[P];
+extern int oprowadza[P];
+extern sem_t semafor_grupa[P];
 extern sem_t semafor_przewodnik[P];
-extern sem_t semafor_trasa[P];
-extern sem_t semafor_w_trasie[P];
+extern pthread_mutex_t mutex_grupa; 
 
 extern volatile int aktywny_park;
-extern int wolny_przewodnik[P];
-extern int przewodnik_stan[P];
-extern int bilety_przewodnik[P];
 
 void *przewodnik(void *arg) {
 	int id_przewodnik = *(int *)arg;
 	free(arg);
 	
-	while(aktywny_park) {
-		sem_wait(&semafor_przewodnik[id_przewodnik]);
-		if(aktywny_park){
-			printf(YEL"&&& [Przewodnik %d] Organizuje grupy...\n"RESET, id_przewodnik);
-			switch(bilety_przewodnik[id_przewodnik]){
-				case 1:
-					sem_wait(&semafor_trasa[id_przewodnik]);
-					printf(YEL"1 &&& [Przewodnik %d] Oprowadza turystów po trasie 1\n"RESET, id_przewodnik);
-					sleep(12);
-					printf(YEL"1 &&& [Przewodnik %d] Kończy oprowadzanie turystów po trasie 1\n"RESET, id_przewodnik);
-					sleep(1);
-					sem_post(&semafor_w_trasie[id_przewodnik]);
-					break;
-				case 2:
-					sem_wait(&semafor_trasa[id_przewodnik]);
-					printf(YEL"2 &&& [Przewodnik %d] Oprowadza turystów po trasie 2\n"RESET, id_przewodnik);
-					sleep(12);
-					printf(YEL"2 &&& [Przewodnik %d] Kończy oprowadzanie turystów po trasie 2\n"RESET, id_przewodnik);
-					sleep(1);
-					sem_post(&semafor_w_trasie[id_przewodnik]);
-					break;
-			}
-			sleep(2);
+	while (aktywny_park) {
+        // Czekamy, aż grupa się zapełni
+        sem_wait(&semafor_przewodnik[id_przewodnik]);
+        if (!aktywny_park) break; //jeśli zamknięto park, przewodnik zamyka się
+
+        int trasa = przypisz_trase[id_przewodnik];
+		
+        printf(YEL"&&& [Przewodnik %d] Oprowadza grupę na trasie %d...\n"RESET, id_przewodnik+1, trasa);
+        sleep(12); // Symulacja oprowadzania
+        printf(YEL"&&& [Przewodnik %d] Kończy oprowadzanie grupy na trasie %d.\n"RESET, id_przewodnik+1, trasa);
+		grupa[id_przewodnik]=0;
+		przypisz_trase[id_przewodnik] = 0;
+		
+		for(int i=0; i < M;i++){
+			sem_post(&semafor_grupa[id_przewodnik]);
 		}
-		sem_post(&semafor_przewodnik[id_przewodnik]);
-	}
+		oprowadza[id_przewodnik] = 0;
+		grupa_aktywowana[id_przewodnik] = 0;	
+    }
 	return NULL;
 }

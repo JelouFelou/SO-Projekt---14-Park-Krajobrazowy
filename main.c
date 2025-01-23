@@ -17,20 +17,16 @@ int id_turysty_kasa[K]; // Tablica przechowująca ID turysty (dla kasy)
 pthread_t kasjer_thread[K], przewodnik_thread[P], turysta_thread[N];
 volatile int aktywny_park = 1;
 
+
 // nowy kod
-int trasa_1[M];
-int trasa_2[M];
-int licznik_trasa_1;
-int licznik_trasa_2;
-int bilety_przewodnik[P];
-int przewodnik_stan[P];
-int wolny_przewodnik[P];
+int grupa_aktywowana[P];
+int przypisz_trase[P];
+int grupa[P];
+int oprowadza[P];
+sem_t semafor_grupa[P];
 sem_t semafor_przewodnik[P];
-sem_t semafor_trasa[P];
-sem_t semafor_w_trasie[P];
-pthread_mutex_t mutex_trasa_1 = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_trasa_2 = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_przewodnika = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_grupa = PTHREAD_MUTEX_INITIALIZER; 
+
 
 int main() {
 	srand(time(NULL));
@@ -51,20 +47,22 @@ int main() {
 		id_turysty_kasa[i] = -1; // -1 - "wyzerowane" ID turysty
 	}
 	
+	
+	// nowe dla przewodnika
+	
 	for (int i = 0; i < P; i++) {
-        if (sem_init(&semafor_przewodnik[i], 0, 0) != 0 || sem_init(&semafor_trasa[i], 0, 0) != 0 || sem_init(&semafor_w_trasie[i], 0, 0) != 0) {
+        if (sem_init(&semafor_grupa[i], 0, 0) != 0 || sem_init(&semafor_przewodnik[i], 0, 0) != 0) {
             perror("Błąd inicjalizacji semaforów");
             exit(EXIT_FAILURE);
         }
-		wolny_przewodnik[i] = 1; // 1 - Przewodnik jest wolny
-		przewodnik_stan[i] = 0; // 0 - Przewodnik nie wyczekuje na pełną grupę
-		bilety_przewodnik[i] = 0; // 0 - brak informacji o trasie
+		grupa_aktywowana[i] = 0;
+		przypisz_trase[i] = 0;
+		grupa[i] = 0;
+		oprowadza[i] = 0;
 	}
 	
-	for (int i = 0; i < M; i++) {
-		trasa_1[i] = 0;
-		trasa_2[i] = 0;
-	}
+	// koniec nowego dla przewodnika
+	
 	
 	printf(GRN "-------Symulacja parku krajobrazowego-------\n\n" RESET);
 	
@@ -75,7 +73,7 @@ int main() {
             perror("Błąd alokacji pamięci");
             exit(EXIT_FAILURE);
         }
-		*id_kasjer = i + 1;
+		*id_kasjer = i;
 		if (pthread_create(&kasjer_thread[i], NULL, kasjer, id_kasjer) != 0) {
 			perror("Błąd tworzenia wątku kasjer");
             exit(EXIT_FAILURE);
@@ -89,7 +87,7 @@ int main() {
             perror("Błąd alokacji pamięci");
             exit(EXIT_FAILURE);
         }
-		*id_przewodnik = i + 1;
+		*id_przewodnik = i;
 		if (pthread_create(&przewodnik_thread[i], NULL, przewodnik, id_przewodnik) != 0) {
 			perror("Błąd tworzenia wątku przewodnik");
             exit(EXIT_FAILURE);
@@ -117,14 +115,19 @@ int main() {
 	for (int i = 0; i < N; i++) {
 		pthread_join(turysta_thread[i], NULL);
 	}
-	// Zakończenie pętli kasjerów
+	
+	// Zamknięcie parku
 	aktywny_park = 0;
+	
+	// Zamykanie kasjerów
     for (int i = 0; i < K; i++) {
         sem_post(&semafor_turysta[i]);
 		pthread_join(kasjer_thread[i], NULL);
 	}
+	
+	// Zamykanie przewodników
 	for (int i = 0; i < P; i++) {
-        sem_post(&semafor_przewodnik[i]);
+		sem_post(&semafor_przewodnik[i]);
         pthread_join(przewodnik_thread[i], NULL);
     }
 	
@@ -134,11 +137,14 @@ int main() {
         sem_destroy(&semafor_kasjer[i]);
         sem_destroy(&semafor_turysta[i]);
     }
-    for (int i = 0; i < P; i++) {
+	
+	// nowe dla przewodnika
+	for (int i = 0; i < P; i++) {
+        sem_destroy(&semafor_grupa[i]);
         sem_destroy(&semafor_przewodnik[i]);
-        sem_destroy(&semafor_trasa[i]);
-        sem_destroy(&semafor_w_trasie[i]);
     }
+	//koniec nowego
+	
 	
 	// Zakończenie symulacji
 	printf(GRN "\nPoprawne zakończenie symulacji\n" RESET);
