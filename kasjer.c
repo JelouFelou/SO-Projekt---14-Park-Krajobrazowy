@@ -7,6 +7,7 @@
 #include "header.h"
 
 #define SERWER 1  // typ komunikatu do serwera (kasjer)
+char temp[15];
 
 int main() {
     key_t key;
@@ -27,19 +28,45 @@ int main() {
 
     while (1) {
         // Oczekiwanie na komunikat od turysty
-		printf("[Kasjer %d] Wyczekuje turysty\n",id_kasjer);
-        msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, SERWER, 0);
-
-        // Kasjer obsługujący turystę
-        printf("[Kasjer %d] Obsługuje turystę: %s\n",id_kasjer, kom.mtext);
+		printf(YEL "[Kasjer %d] Wyczekuje turysty\n" RESET, id_kasjer);
 		
-        // Wydawanie biletu (symulacja)
-        sleep(2);
-        printf("[Kasjer %d] Wydaje bilet na trasę turyście: %s\n",id_kasjer, kom.mtext);
-        
-        // Wysyłanie odpowiedzi do turysty
-		printf("[Kasjer %d] Wysylanie... %d -> %s\n", id_kasjer,id_kasjer, kom.mtext);
+		// Odbieranie turysty z kolejki
+        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, SERWER, 0) == -1) {
+            perror("msgrcv failed");
+            continue;
+        }
+
+		// Wywołanie turysty do kasy
+        int id_turysta = strtol(kom.mtext + 9, NULL, 10);  // Wyciąga PID z "[Turysta XXXX]"
+        printf(GRN "[Kasjer %d] Wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
+		sleep(2);
+		
+        // Wysyłanie zgody na podejście
+        kom.mtype = id_turysta;
+        sprintf(kom.mtext, "Zapraszamy do kasy");
         msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
-    }
+		sleep(1);
+		
+        // Odbieranie szczegółów zakupu
+        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, SERWER, 0) == -1) {
+            perror("msgrcv failed");
+            continue;
+        }
+
+		// Pobranie typu trasy z komunikatu
+		int typ_trasy = 0;
+		if (strstr(kom.mtext, "trasę") != NULL) {
+			sscanf(strstr(kom.mtext, "trasę") + 6, "%d", &typ_trasy);
+		}
+		sleep(1);
+		
+		// Wydawanie biletu
+        printf("[Kasjer %d] Wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
+        kom.mtype = id_turysta;
+        sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
+        msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
+        sleep(2);
+	}
+
     return 0;
 }
