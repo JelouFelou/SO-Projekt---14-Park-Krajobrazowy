@@ -2,36 +2,46 @@
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/sem.h>
 #include <unistd.h>
 #include <string.h>
 #include "header.h"
 
-#define SERWER 1  // typ komunikatu do serwera (kasjer)
-char temp[15];
-
 int main() {
-    key_t key;
-    int IDkolejki;
-	int id_kasjer = getpid();
+    key_t key_kolejka, key_semafor;
+    int IDkolejki, semid;
     struct komunikat kom;
+    int id_kasjer = getpid();
 
 	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
 
-    // Tworzenie unikalnego klucza do kolejki
-    key = ftok(".", 98);
+    // Tworzenie klucza do kolejki i semafora
+    key_kolejka = ftok(".", 98);
+    key_semafor = ftok(".", 99);
 
-    // Tworzenie kolejki
-    if ((IDkolejki = msgget(key, IPC_CREAT | 0666)) == -1) {
+    // Tworzenie kolejki komunikatów
+    if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0666)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 
+    // Tworzenie semafora
+    if ((semid = semget(key_semafor, 1, IPC_CREAT | 0666)) == -1) {
+        perror("semget() błąd");
+        exit(1);
+    }
+
+    // Inicjalizacja semafora na wartość 1 (kasa wolna)
+    union semun arg;
+    arg.val = 1;
+    semctl(semid, 0, SETVAL, arg);
+	
     while (1) {
         // Oczekiwanie na komunikat od turysty
 		printf(YEL "[Kasjer %d] Wyczekuje turysty\n" RESET, id_kasjer);
 		
-		// Odbieranie turysty z kolejki
-        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, SERWER, 0) == -1) {
+		// Pobranie turysty z kolejki (FIFO)
+        if (msgrcv(IDkolejki, &kom, MAX, SERWER, 0) == -1) {
             perror("msgrcv failed");
             continue;
         }
@@ -44,11 +54,10 @@ int main() {
         // Wysyłanie zgody na podejście
         kom.mtype = id_turysta;
         sprintf(kom.mtext, "Zapraszamy do kasy");
-        msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
-		sleep(1);
+        msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		
-        // Odbieranie szczegółów zakupu
-        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, SERWER, 0) == -1) {
+        // Odbiór komunikatu od turysty
+        if (msgrcv(IDkolejki, &kom, MAX, SERWER, 0) == -1) {
             perror("msgrcv failed");
             continue;
         }
@@ -64,8 +73,11 @@ int main() {
         printf("[Kasjer %d] Wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
         kom.mtype = id_turysta;
         sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
-        msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
+        msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
         sleep(2);
+		
+		struct sembuf v = {0, 1, 0};
+        semop(semid, &v, 1);
 	}
 
     return 0;
