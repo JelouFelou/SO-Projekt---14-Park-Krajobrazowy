@@ -7,6 +7,16 @@
 #include <string.h>
 #include "header.h"
 
+int turyści_w_parku[N];  // Rejestracja turystów
+int liczba_turystów = 0;
+
+void rejestruj_wyjście(int IDkolejki) {
+    struct komunikat kom;
+    if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, IPC_NOWAIT) != -1) {
+        printf(BLU "[Kasjer] Otrzymał listę wychodzących turystów: %s\n" RESET, kom.mtext);
+    }
+}
+
 int main() {
     key_t key_kolejka, key_semafor;
     int IDkolejki, semid;
@@ -38,17 +48,19 @@ int main() {
 	
     while (1) {
         // Oczekiwanie na komunikat od turysty
-		printf(YEL "[Kasjer %d] Wyczekuje turysty\n" RESET, id_kasjer);
+		printf(YEL "[Kasjer %d] wyczekuje turysty\n" RESET, id_kasjer);
+		rejestruj_wyjście(IDkolejki);
 		
 		// Pobranie turysty z kolejki (FIFO)
-        if (msgrcv(IDkolejki, &kom, MAX, SERWER, 0) == -1) {
+        if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
             perror("msgrcv failed");
             continue;
         }
 
 		// Wywołanie turysty do kasy
         int id_turysta = strtol(kom.mtext + 9, NULL, 10);  // Wyciąga PID z "[Turysta XXXX]"
-        printf(GRN "[Kasjer %d] Wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
+        printf(GRN "[Kasjer %d] wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
+		turyści_w_parku[liczba_turystów++] = id_turysta;
 		sleep(2);
 		
         // Wysyłanie zgody na podejście
@@ -57,7 +69,7 @@ int main() {
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		
         // Odbiór komunikatu od turysty
-        if (msgrcv(IDkolejki, &kom, MAX, SERWER, 0) == -1) {
+        if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
             perror("msgrcv failed");
             continue;
         }
@@ -70,7 +82,7 @@ int main() {
 		sleep(1);
 		
 		// Wydawanie biletu
-        printf("[Kasjer %d] Wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
+        printf("[Kasjer %d] wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
         kom.mtype = id_turysta;
         sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
