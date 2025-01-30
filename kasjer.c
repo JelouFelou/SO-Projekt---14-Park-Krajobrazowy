@@ -7,15 +7,9 @@
 #include <string.h>
 #include "header.h"
 
-int turyści_w_parku[N];  // Rejestracja turystów
-int liczba_turystów = 0;
+int turysci_w_parku[N];  // Rejestracja turystów
+int liczba_turystow = 0;
 
-void rejestruj_wyjście(int IDkolejki) {
-    struct komunikat kom;
-    if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, IPC_NOWAIT) != -1) {
-        printf(BLU "[Kasjer] Otrzymał listę wychodzących turystów: %s\n" RESET, kom.mtext);
-    }
-}
 
 int main() {
     key_t key_kolejka, key_semafor;
@@ -49,7 +43,6 @@ int main() {
     while (1) {
         // Oczekiwanie na komunikat od turysty
 		printf(YEL "[Kasjer %d] wyczekuje turysty\n" RESET, id_kasjer);
-		rejestruj_wyjście(IDkolejki);
 		
 		// Pobranie turysty z kolejki (FIFO)
         if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
@@ -58,9 +51,18 @@ int main() {
         }
 
 		// Wywołanie turysty do kasy
-        int id_turysta = strtol(kom.mtext + 9, NULL, 10);  // Wyciąga PID z "[Turysta XXXX]"
+        int id_turysta = 0;
+		if (strstr(kom.mtext, "[Turysta") != NULL) {
+			// Wyciąganie PID z komunikatu w formacie "[Turysta XXXX]"
+			char *pid_start = strchr(kom.mtext, ' ') + 1;  // Szukamy spacji po "Turysta"
+			if (pid_start) {
+				id_turysta = strtol(pid_start, NULL, 10);
+			}
+		}
+
+		
         printf(GRN "[Kasjer %d] wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
-		turyści_w_parku[liczba_turystów++] = id_turysta;
+		turysci_w_parku[liczba_turystow++] = id_turysta; // Dodaje turystę do parku
 		sleep(2);
 		
         // Wysyłanie zgody na podejście
@@ -86,6 +88,7 @@ int main() {
         kom.mtype = id_turysta;
         sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+
         sleep(2);
 		
 		struct sembuf v = {0, 1, 0};

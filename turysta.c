@@ -80,7 +80,7 @@ int main() {
     sprintf(kom.mtext, "%d %d", id_turysta, typ_trasy);
     msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-    printf("[Turysta %d] czeka na zakończenie oprowadzania...\n", id_turysta);
+    printf("[Turysta %d] czeka na rozpoczęcie oprowadzania\n", id_turysta);
     struct sembuf p2 = {0, -1, 0};  // Czeka na przewodnika
     semop(semid_wyjscie, &p2, 1);
 
