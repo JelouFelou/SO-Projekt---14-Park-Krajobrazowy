@@ -7,6 +7,7 @@
 #include <string.h>
 #include <signal.h>
 #include "header.h"
+#include "trasa.h"
 
 #define SEM_KEY 'A'
 
@@ -14,9 +15,12 @@ int grupa[M];
 int liczba_w_grupie = 0;
 void awaryjne_wyjscie(int);
 int IDkolejki, semid_wyjscie;
+int semid_most, semid_wieza, semid_prom;
+int semid_kierunek;
 
 int main() {
 	key_t key_kolejka, key_semafor_wyjscie;
+	key_t key_most, key_wieza, key_prom, key_most_kierunek;
     
     struct komunikat kom;
     int id_przewodnik = getpid();
@@ -28,22 +32,51 @@ int main() {
 	// Tworzenie kolejki komunikatów
     key_kolejka = ftok(".", 98);
 	key_semafor_wyjscie = ftok(".", 100);
+	// Tworzenie semaforów trasy
+	key_most = ftok(".", 200);
+	key_wieza = ftok(".", 201);
+	key_prom = ftok(".", 202);
 
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0666)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 	
-	// Tworzenie semafora wyjścia
+	// Tworzenie semaforów
     if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0666)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
+	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0666)) == -1) {
+		perror("Błąd przy tworzeniu semafora mostu");
+		exit(1);
+	}
+	if ((semid_wieza = semget(key_wieza, 1, IPC_CREAT | 0666)) == -1) {
+		perror("Błąd przy tworzeniu semafora wieży");
+		exit(1);
+	}
+	if ((semid_prom = semget(key_prom, 1, IPC_CREAT | 0666)) == -1) {
+		perror("Błąd przy tworzeniu semafora promu");
+		exit(1);
+	}
+	if ((semid_kierunek = semget(key_most_kierunek, 1, IPC_CREAT | 0666)) == -1) {
+		perror("Błąd przy tworzeniu semafora kierunku mostu");
+		exit(1);
+	}
 	
 	// Inicjalizacja semafora wyjścia na 0 (blokada wyjścia)
     union semun arg;
     arg.val = 0;
     semctl(semid_wyjscie, 0, SETVAL, arg);
+	arg.val = X1;
+	semctl(semid_most, 0, SETVAL, arg);
+	arg.val = X2;
+	semctl(semid_wieza, 0, SETVAL, arg);
+	arg.val = X3;
+	semctl(semid_prom, 0, SETVAL, arg);
+	arg.val = 1;
+	semctl(semid_kierunek, 0, SETVAL, arg);
+	
 	signal(SIGINT,awaryjne_wyjscie); //po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
 
     while (1) {
@@ -67,29 +100,27 @@ int main() {
             sleep(1);
 			
 			// Inna trasa zależna od typ_trasy
-			switch(typ_trasy){
-				case(1):
-					printf("[Przewodnik %d]: Jesteśmy przy kasach\n",id_przewodnik);
-					sleep(1);
-					printf("[Przewodnik %d]: Aktualnie przechodzimy mostem wiszącym\n",id_przewodnik);
-					sleep(3);
-					printf("[Przewodnik %d]: Aktualnie wchodzimy na wieżę widokową\n",id_przewodnik);
-					sleep(4);
-					printf("[Przewodnik %d]: Aktualnie płyniemy promem\n",id_przewodnik);
-					sleep(3);
-					printf("[Przewodnik %d]: Wróciliśmy do kas\n",id_przewodnik);
-					break;
-				case(2):
-					printf("[Przewodnik %d]: Jesteśmy przy kasach\n",id_przewodnik);
-					sleep(1);
-					printf("[Przewodnik %d]: Aktualnie płyniemy promem\n",id_przewodnik);
-					sleep(3);
-					printf("[Przewodnik %d]: Aktualnie wchodzimy na wieżę widokową\n",id_przewodnik);
-					sleep(4);
-					printf("[Przewodnik %d]: Aktualnie przechodzimy mostem wiszącym\n",id_przewodnik);
-					sleep(3);
-					printf("[Przewodnik %d]: Wróciliśmy do kas\n",id_przewodnik);
-					break;
+			switch(typ_trasy) {
+				case 1:
+				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
+				sleep(1);
+				TrasaA(IDkolejki, semid_most, semid_kierunek, id_przewodnik, grupa, liczba_w_grupie);
+				sleep(1);
+				TrasaB(IDkolejki, semid_wieza, id_przewodnik, grupa, liczba_w_grupie);
+				sleep(1);
+				TrasaC(IDkolejki, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
+				sleep(1);
+				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
+				break;
+    
+			case 2:
+				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
+				sleep(1);
+				TrasaC(IDkolejki, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaB(IDkolejki, semid_wieza, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, semid_most, semid_kierunek, id_przewodnik, grupa, liczba_w_grupie);
+				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
+				break;
 			}
 
             char lista_wychodzących[MAX] = ""; // Inicjalizacja pustej listy
@@ -117,7 +148,8 @@ int main() {
 					perror("msgsnd failed");
 				}
 			} else {
-				printf("Wszyscy turyści zostali wysłani do kasy.\n");
+				sleep(rand() % 4 + 3);
+				printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
 			}
 
 			struct sembuf v = {0, M, 0}; 
@@ -139,7 +171,7 @@ void awaryjne_wyjscie(int sig_n) {
     struct komunikat kom;
     char lista_wychodzacych[MAX] = "";
 
-    printf("\nAwaryjne wyjście! Turystyka przerywana!\n");
+    printf(RED"\nWyjście awaryjne! Turystyka przerywana! Prosimy o powrót do kasy!\n"RESET);
 
 	for (int i = 0; i < M; i++) {
         grupa[i] = 0;
@@ -164,7 +196,7 @@ void awaryjne_wyjscie(int sig_n) {
             perror("msgsnd failed");
         }
     } else {
-		printf("Wszyscy turyści zostali wysłani do kasy.\n");
+		printf(GRN"Wszyscy turyści zostali wysłani do kasy.\n"RESET);
 	}
 
     // Przywracamy stan początkowy grupy
