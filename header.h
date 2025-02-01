@@ -8,7 +8,7 @@
 #define N 50 // maksymalna ilość osób w parku w ciągu dnia
 #define K 4 // liczba kas
 #define M 3 // wielkość grupy odprowadzanej przez przewodnika
-//#define P 4 // liczba przewodników
+#define P 4 // liczba przewodników
 #define MAX 256
 #define KASJER 1  // typ komunikatu do kasjera
 #define PRZEWODNIK 2 // typ komunikatu do przewodnika
@@ -29,5 +29,13 @@ union semun {
     struct semid_ds *buf;
     unsigned short *array;
 };
+
+void semafor_operacja(int semid, int zmiana) {
+    struct sembuf operacja = {0, zmiana, 0};
+    if (semop(semid, &operacja, 1) == -1) {
+        perror("Błąd semop");
+        exit(1);
+    }
+}
 
 #endif

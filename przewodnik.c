@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 #include "header.h"
 #include "trasa.h"
 
@@ -16,11 +17,25 @@ int liczba_w_grupie = 0;
 void awaryjne_wyjscie(int);
 int IDkolejki, semid_wyjscie;
 int semid_most, semid_wieza, semid_prom;
-int semid_kierunek;
+int *licznik_most;
 
 int main() {
+	
+	if(X1>=M){
+		printf("X1 musi być mniejsze od M, aktualnie M = %d\n",M);
+		return 0;
+	}
+	if(X2>=(2*M)){
+		printf("X2 musi być mniejsze od 2M, aktualnie 2M = %d\n",2*M);
+		return 0;
+	}
+	if(X3>=(1.5*M)){
+		printf("X1 musi być mniejsze od 1.5M, aktualnie 1.5M = %.2f\n",1.5*M);
+		return 0;
+	}
+	
 	key_t key_kolejka, key_semafor_wyjscie;
-	key_t key_most, key_wieza, key_prom, key_most_kierunek;
+	key_t key_most, key_wieza, key_prom;
     
     struct komunikat kom;
     int id_przewodnik = getpid();
@@ -29,24 +44,27 @@ int main() {
 	
 	printf(GRN "-------Symulacja parku krajobrazowego - Przewodnik %d-------\n\n" RESET,id_przewodnik);
 	
-	// Tworzenie kolejki komunikatów
+	// Generowanie unikalnych kluczy IPC dla kolejki i semaforów
     key_kolejka = ftok(".", 98);
 	key_semafor_wyjscie = ftok(".", 100);
-	// Tworzenie semaforów trasy
 	key_most = ftok(".", 200);
 	key_wieza = ftok(".", 201);
 	key_prom = ftok(".", 202);
+	
 
+	// Tworzenie kolejki komunikatów IPC
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0666)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 	
-	// Tworzenie semaforów
+	// Tworzenie semaforu odpowiedzialnego za skończenie podróży
     if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0666)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
+	
+	// Tworzenie semaforów dla poszczególnych obiektów trasy
 	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0666)) == -1) {
 		perror("Błąd przy tworzeniu semafora mostu");
 		exit(1);
@@ -59,13 +77,9 @@ int main() {
 		perror("Błąd przy tworzeniu semafora promu");
 		exit(1);
 	}
-	if ((semid_kierunek = semget(key_most_kierunek, 1, IPC_CREAT | 0666)) == -1) {
-		perror("Błąd przy tworzeniu semafora kierunku mostu");
-		exit(1);
-	}
 	
-	// Inicjalizacja semafora wyjścia na 0 (blokada wyjścia)
-    union semun arg;
+	union semun arg;
+	// Inicjalizacja semaforów trasy
     arg.val = 0;
     semctl(semid_wyjscie, 0, SETVAL, arg);
 	arg.val = X1;
@@ -74,10 +88,17 @@ int main() {
 	semctl(semid_wieza, 0, SETVAL, arg);
 	arg.val = X3;
 	semctl(semid_prom, 0, SETVAL, arg);
-	arg.val = 1;
-	semctl(semid_kierunek, 0, SETVAL, arg);
 	
-	signal(SIGINT,awaryjne_wyjscie); //po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
+	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
+	signal(SIGINT,awaryjne_wyjscie); 
+	
+	licznik_most = (int *)malloc(sizeof(int));
+    if (licznik_most == NULL) {
+        perror("Failed to allocate memory for licznik_most");
+        exit(1);
+    }
+    
+    *licznik_most = 0;
 
     while (1) {
 		if(wyczekuje == 1){ //wyświetli tylko raz, że wyczekuje turystę zamiast za każdym razem jak turysta dołączy
@@ -96,6 +117,7 @@ int main() {
         grupa[liczba_w_grupie++] = id_turysta;
 
         if (liczba_w_grupie == M) {
+			sleep(2);
             printf(GRN"\n[Przewodnik %d]: \"Grupa zapełniona! Oprowadzę was po trasie %d\"\n"RESET,id_przewodnik, typ_trasy);
             sleep(1);
 			
@@ -104,7 +126,7 @@ int main() {
 				case 1:
 				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
 				sleep(1);
-				TrasaA(IDkolejki, semid_most, semid_kierunek, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, semid_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				TrasaB(IDkolejki, semid_wieza, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
@@ -118,7 +140,7 @@ int main() {
 				sleep(1);
 				TrasaC(IDkolejki, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
 				TrasaB(IDkolejki, semid_wieza, id_przewodnik, grupa, liczba_w_grupie);
-				TrasaA(IDkolejki, semid_most, semid_kierunek, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, semid_most, id_przewodnik, grupa, liczba_w_grupie);
 				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
 				break;
 			}
@@ -152,8 +174,7 @@ int main() {
 				printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
 			}
 
-			struct sembuf v = {0, M, 0}; 
-			semop(semid_wyjscie, &v, 1);
+			semafor_operacja(semid_wyjscie, M);
 
 			// Resetowanie liczby turystów i stanu oczekiwania
 			liczba_w_grupie = 0;
@@ -161,6 +182,7 @@ int main() {
 			printf("\n");
         }
     }
+	return 0;
 }
 
 void awaryjne_wyjscie(int sig_n) {
@@ -210,8 +232,7 @@ void awaryjne_wyjscie(int sig_n) {
         exit(1);
     }
 
-    struct sembuf v = {0, M, 0};
-    semop(semid_wyjscie, &v, 1);
+	semafor_operacja(semid_wyjscie, M);
 
     // Zamykamy proces po wykonaniu awaryjnego wyjścia
     exit(0);

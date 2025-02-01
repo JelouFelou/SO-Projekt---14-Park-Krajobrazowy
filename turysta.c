@@ -45,8 +45,7 @@ int main() {
 	printf("> [Turysta %d] podchodzi do kasy\n\n",id_turysta);
 	
 	// Próba zajęcia semafora (czeka, jeśli kasa zajęta)
-    struct sembuf p = {0, -1, 0};
-    semop(semid, &p, 1);
+	semafor_operacja(semid, -1);
 	
 	// Zgłoszenie do kolejki
     sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
@@ -75,14 +74,9 @@ int main() {
 	
 	sleep(2);
 	printf("[Turysta %d] otrzymał bilet i idzie do przewodnika\n", id_turysta);
-    
-    kom.mtype = PRZEWODNIK;
-    sprintf(kom.mtext, "%d %d", id_turysta, typ_trasy);
-    msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
     printf("[Turysta %d] czeka na rozpoczęcie oprowadzania\n", id_turysta);
-    struct sembuf p2 = {0, -1, 0};  // Czeka na przewodnika
-    semop(semid_wyjscie, &p2, 1);
+	semafor_operacja(semid_wyjscie, -1);
 
     printf("[Turysta %d] opuszcza park po zakończeniu trasy\n", id_turysta);
 

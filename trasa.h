@@ -1,105 +1,82 @@
 #ifndef TRASA_H
 #define TRASA_H
 
+#include "header.h"
+
 #define X1 2   // Maksymalna liczba osób na moście
 #define X2 2   // Maksymalna liczba osób na wieży
 #define X3 2   // Maksymalna liczba osób na promie
 
+extern int *licznik_most;
 
-
-void TrasaA(int IDkolejki, int semid_most, int semid_kierunek, int id_przewodnik, int grupa[], int liczba_w_grupie) {
+// -------Most Wiszący-------
+void TrasaA(int IDkolejki, int semid_most, int id_przewodnik, int grupa[], int liczba_w_grupie) {
     printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
     printf("[Przewodnik %d]: Sprawdzam most wiszący...\n", id_przewodnik);
-    
-    // Sprawdzanie, czy most jest dostępny w odpowiednim kierunku (semid_kierunek)
-    struct sembuf kierunek = {0, -1, 0}; // Oczekuje na dostępność kierunku mostu (zablokowanie kierunku)
-    if (semop(semid_kierunek, &kierunek, 1) == -1) {
-        perror("Błąd semop przy sprawdzaniu kierunku");
-        return;
+
+    if (*licznik_most == 0) {
+        printf("[Przewodnik %d]: Na moście nie ma aktualnie nikogo!\n", id_przewodnik);
     }
-    // Czekanie na możliwość wejścia na most (semafor kontrolujący wejścia)
-    struct sembuf wejscie = {0, -1, 0}; // Oczekuje na wolne miejsce na moście
-    if (semop(semid_most, &wejscie, 1) == -1) {
-        perror("Błąd semop przy czekaniu na most");
-        return;
-    }
-    
-	// --------Wejście na most--------
-    printf("[Przewodnik %d]: Wchodzę na most jako pierwszy.\n", id_przewodnik);
-    sleep(1);
-    // Iterowanie po turystach w grupie i wypisywanie ich ID po przejściu przez most
+	
+	semafor_operacja(semid_most, -1);
+	(*licznik_most)++;
+	printf("[Przewodnik %d]: Wchodzę na most jako pierwszy z naszej grupy\n", id_przewodnik);
+	
+	
+    // Wchodzenie turystów na most
     for (int i = 0; i < liczba_w_grupie; i++) {
-        printf("[Turysta %d]: Przechodzę przez most...\n", grupa[i]);
-        sleep(rand() % 2 + 1); // Symulacja czasu przejścia turysty
+		// Zajęcie miejsca na moście
+		semafor_operacja(semid_most, -1);
+		(*licznik_most)++;
+		if(i==0){
+			printf("[Turysta %d]: Wchodzę na most...\n", grupa[i]); // to powinno znaleźć się w turysta.c
+			sleep(rand() % 1 + 1);
+			
+			// Przewodnik schodzi z mostu
+			semafor_operacja(semid_most, 1);
+			(*licznik_most)--;
+			printf("[Przewodnik %d]: Przeszedłem przez most i czekam na moją grupę\n", id_przewodnik);
+			sleep(1);
+		}
+		
+		// Zwolnienie miejsca na moście
+		printf("[Turysta %d]: Dotarłem na koniec mostu...\n", grupa[i]);
+        semafor_operacja(semid_most, 1);
+        (*licznik_most)--;
+
+        printf("[Turysta %d]: Zszedłem z mostu.\n", grupa[i]);
     }
-    printf("[Przewodnik %d]: Wszyscy przeszli most.\n", id_przewodnik);
 	
-	
-    // Zwolnienie semafora dla kierunku (umożliwienie innym grupom przejścia)
-    struct sembuf wyjscie_kierunek = {0, 1, 0};  // Zwalnianie semafora kierunku
-    if (semop(semid_kierunek, &wyjscie_kierunek, 1) == -1) {
-        perror("Błąd semop przy zwalnianiu semafora kierunku");
-        return;
-    }
-    // Zwolnienie miejsca na moście
-    struct sembuf wyjscie = {0, 1, 0};
-    if (semop(semid_most, &wyjscie, 1) == -1) {
-        perror("Błąd semop przy zwalnianiu semafora mostu");
-        return;
-    }
-    // Zmiana kierunku mostu, aby inna grupa mogła przejść
-    struct sembuf zmiana_kierunku = {0, 1, 0}; // Zmiana kierunku mostu
-    if (semop(semid_kierunek, &zmiana_kierunku, 1) == -1) {
-        perror("Błąd semop przy zmianie kierunku mostu");
-        return;
-    }
+    printf("[Przewodnik %d]: Wszyscy z mojej grupy przeszli przez most.\n", id_przewodnik);
+	printf("[Przewodnik %d]: Możemy w takim wypadku iść dalej.\n", id_przewodnik);
 }
 
 
-
+// -------Wieża Widokowa-------
 void TrasaB(int IDkolejki, int semid_wieza, int id_przewodnik, int grupa[], int liczba_w_grupie) {
     printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[Przewodnik %d]: Grupa idzie na wieżę widokową.\n", id_przewodnik);
 
-    // Turyści wchodzą na wieżę
-    for (int i = 0; i < liczba_w_grupie; i++) {
-        struct sembuf wejscie = {0, -1, 0};
-        semop(semid_wieza, &wejscie, 1);
-    }
+
 
     sleep(rand() % 5 + 3); // Czas spędzony na wieży
 
-    // Turyści schodzą z wieży
-    for (int i = 0; i < liczba_w_grupie; i++) {
-        struct sembuf wyjscie = {0, 1, 0};
-        semop(semid_wieza, &wyjscie, 1);
-    }
+
 
     printf("[Przewodnik %d]: Wszyscy zeszli z wieży.\n", id_przewodnik);
 }
 
 
-
+// -------Płynięcie promem-------
 void TrasaC(int IDkolejki, int semid_prom, int id_przewodnik, int grupa[], int liczba_w_grupie) {
     printf(GRN "\n-------Płynięcie promem-------\n\n" RESET);
 	printf("[Przewodnik %d]: Grupa czeka na prom.\n", id_przewodnik);
 
-    // Wejście na prom
-    for (int i = 0; i < liczba_w_grupie; i++) {
-        struct sembuf wejscie = {0, -1, 0};
-        semop(semid_prom, &wejscie, 1);
-    }
 
     printf("[Przewodnik %d]: Prom odpływa...\n", id_przewodnik);
     sleep(rand() % 5 + 3); // Czas przepłynięcia
 
     printf("[Przewodnik %d]: Prom dopłynął, grupa wysiada.\n", id_przewodnik);
-
-    // Zwalnianie miejsc na promie
-    for (int i = 0; i < liczba_w_grupie; i++) {
-        struct sembuf wyjscie = {0, 1, 0};
-        semop(semid_prom, &wyjscie, 1);
-    }
 }
 
 #endif

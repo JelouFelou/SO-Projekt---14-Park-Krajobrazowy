@@ -88,11 +88,15 @@ int main() {
         kom.mtype = id_turysta;
         sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		
+		// Przekazuje turystę do przewodnika
+		kom.mtype = PRZEWODNIK;
+		sprintf(kom.mtext, "%d %d", id_turysta, typ_trasy);
+		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
         sleep(2);
 		
-		struct sembuf v = {0, 1, 0};
-        semop(semid, &v, 1);
+		semafor_operacja(semid, 1);
 	}
 
     return 0;
