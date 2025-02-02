@@ -80,17 +80,25 @@ int main() {
 		if (strstr(kom.mtext, "trasę") != NULL) {
 			sscanf(strstr(kom.mtext, "trasę") + 6, "%d", &typ_trasy);
 		}
+		int wiek = 0;
+		if (strstr(kom.mtext, "wiek") != NULL) {
+			sscanf(strstr(kom.mtext, "wiek") + 5, "%d", &wiek);
+		}
 		sleep(1);
 		
 		// Wydawanie biletu
-        printf("[Kasjer %d] wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
-        kom.mtype = id_turysta;
+		if(wiek<8){
+			printf("[Kasjer %d] Dzieci poniżej 8 roku życia nie płacą za bilet\n\n", id_kasjer);
+		}
+		printf("[Kasjer %d] wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
+		
+		kom.mtype = id_turysta;
         sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		
 		// Przekazuje turystę do przewodnika
 		kom.mtype = PRZEWODNIK;
-		sprintf(kom.mtext, "%d %d", id_turysta, typ_trasy);
+		sprintf(kom.mtext, "%d %d %d", id_turysta, typ_trasy, wiek);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
         sleep(2);

@@ -24,6 +24,14 @@ struct komunikat {
     char mtext[MAX];
 };
 
+// Struktura pamięci współdzielonej
+typedef struct {
+    int liczba_osob_na_moscie;
+	int liczba_osob_na_wiezy;
+	int liczba_osob_na_promie
+	int most_kierunek;
+} SharedData;
+
 union semun {
     int val;
     struct semid_ds *buf;

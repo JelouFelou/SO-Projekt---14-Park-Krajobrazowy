@@ -15,6 +15,7 @@
 void awaryjne_wyjscie(int);
 
 int grupa[M];
+int wiek_turysty[M];
 int liczba_w_grupie = 0;
 int IDkolejki, semid_wyjscie, semid_wycieczka;
 int semid_most, semid_wieza, semid_prom;
@@ -38,7 +39,7 @@ int main() {
 	
 	struct komunikat kom;
 	int id_przewodnik = getpid();
-	int id_turysta, typ_trasy;
+	int id_turysta, typ_trasy, wiek;
 	int wyczekuje = 1;
 	
 	key_t key_kolejka, key_semafor_wyjscie, key_semafor_wycieczka;
@@ -156,10 +157,11 @@ int main() {
             continue;
         }
         
-        sscanf(kom.mtext, "%d %d", &id_turysta, &typ_trasy);
+        sscanf(kom.mtext, "%d %d %d", &id_turysta, &typ_trasy, &wiek);
 
         printf(">>>[Turysta %d] dołącza do trasy %d\n", id_turysta, typ_trasy);
         grupa[liczba_w_grupie++] = id_turysta;
+		wiek_turysty[liczba_w_grupie++] = wiek;
 
         if (liczba_w_grupie == M) {
 			sleep(2);
@@ -172,7 +174,7 @@ int main() {
 				case 1:
 				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
 				sleep(1);
-				TrasaA(IDkolejki, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
 				TrasaB(IDkolejki, semid_wieza, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);

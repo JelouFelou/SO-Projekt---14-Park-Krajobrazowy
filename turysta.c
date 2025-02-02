@@ -13,7 +13,8 @@ int main() {
 	struct komunikat kom;
 	int id_turysta = getpid();
     int typ_trasy = /*(rand() % 2) + */1;
-	//int wiek = (rand() % 70) + 19;
+	int wiek = (rand() % 80) + 1;
+	int vip = ((rand() % 100) + 1) == 47;
 	
     key_t key_kolejka, key_semafor_kasa, key_semafor_wyjscie, key_semafor_wycieczka;
     key_t key_turysta_most, key_turysta_wieza, key_turysta_prom;
@@ -22,6 +23,24 @@ int main() {
 	int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 	int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
 	
+	// Tworzymy segment pamięci współdzielonej
+    key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
+    int shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0666);
+    if (shm_id == -1) {
+        perror("shmget");
+        exit(1);
+    }
+
+    SharedData *shm_ptr = (SharedData *)shmat(shm_id, NULL, 0);
+    if (shm_ptr == (void *)-1) {
+        perror("shmat");
+        exit(1);
+    }
+
+    // Inicjalizowanie danych w pamięci współdzielonej
+    if (shm_ptr->liczba_osob_na_moscie == 0) {
+		shm_ptr->liczba_osob_na_moscie = 0;  // Zapobieganie zerowaniu liczby w wypadku dołączenia nowego przewodnika
+	}
 	
 	printf(GRN "-------Symulacja parku krajobrazowego - Turysta %d-------\n\n" RESET,id_turysta);
 
@@ -110,7 +129,7 @@ int main() {
     }
 	
 	// Komunikat do kasjera
-    sprintf(kom.mtext, "[Turysta %d] chce kupić bilet na trasę %d",id_turysta, typ_trasy);
+    sprintf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d",id_turysta, typ_trasy);
     kom.mtype = KASJER;
     printf("[Turysta %d] przekazuje kasjerowi, że chce kupić bilet na trasę %d\n", id_turysta, typ_trasy);
 	msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
@@ -137,11 +156,16 @@ int main() {
 			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
 			semafor_operacja(semid_turysta_most, -1);
 			sleep(rand() % 1 + 1);
-			printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
+			if(wiek<15){
+				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
+			}else{
+				printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
+			}
 			sleep(1);
 			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
 			sleep(rand() % 2 + 1);
 			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
+			shm_ptr->liczba_osob_na_moscie--;
 			semafor_operacja(semid_przewodnik_most, 1);
 			
 			// Wieza
