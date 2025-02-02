@@ -12,25 +12,23 @@ int liczba_turystow = 0;
 
 
 int main() {
-    key_t key_kolejka, key_semafor;
-    int IDkolejki, semid;
+    key_t key_kolejka, key_semafor_kasa;
+    int IDkolejki, semid_kasa;
     struct komunikat kom;
     int id_kasjer = getpid();
 
 	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
 
-    // Tworzenie klucza do kolejki i semafora
-    key_kolejka = ftok(".", 98);
-    key_semafor = ftok(".", 99);
-
     // Tworzenie kolejki komunikatów
+	key_kolejka = ftok(".", 98);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0666)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 
     // Tworzenie semafora
-    if ((semid = semget(key_semafor, 1, IPC_CREAT | 0666)) == -1) {
+	key_semafor_kasa = ftok(".", 99);
+    if ((semid_kasa = semget(key_semafor_kasa, 1, IPC_CREAT | 0666)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
@@ -38,7 +36,7 @@ int main() {
     // Inicjalizacja semafora na wartość 1 (kasa wolna)
     union semun arg;
     arg.val = 1;
-    semctl(semid, 0, SETVAL, arg);
+    semctl(semid_kasa, 0, SETVAL, arg);
 	
     while (1) {
         // Oczekiwanie na komunikat od turysty
@@ -96,7 +94,7 @@ int main() {
 
         sleep(2);
 		
-		semafor_operacja(semid, 1);
+		semafor_operacja(semid_kasa, 1);
 	}
 
     return 0;
