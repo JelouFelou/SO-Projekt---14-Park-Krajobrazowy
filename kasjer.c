@@ -10,12 +10,12 @@
 int turysci_w_parku[N];  // Rejestracja turystów
 int liczba_turystow = 0;
 
-
 int main() {
-    key_t key_kolejka, key_semafor_kasa;
-    int IDkolejki, semid_kasa;
-    struct komunikat kom;
+	struct komunikat kom;
     int id_kasjer = getpid();
+	
+	int IDkolejki, semid_kasa;
+	key_t key_kolejka, key_semafor_kasa;
 
 	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
 
@@ -33,10 +33,11 @@ int main() {
         exit(1);
     }
 
-    // Inicjalizacja semafora na wartość 1 (kasa wolna)
+    // Inicjalizacja semafora kasy na wartość 1 (kasa wolna)
     union semun arg;
     arg.val = 1;
-    semctl(semid_kasa, 0, SETVAL, arg);
+		semctl(semid_kasa, 0, SETVAL, arg);
+	
 	
     while (1) {
         // Oczekiwanie na komunikat od turysty

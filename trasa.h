@@ -8,20 +8,21 @@
 #define X3 3   // Maksymalna liczba osób na promie (X3<1.5*M)
 
 // -------Most Wiszący-------
-void TrasaA(int IDkolejki, int semid_most, int semid_turysta_most, int id_przewodnik, int grupa[], int liczba_w_grupie) {
+void TrasaA(int IDkolejki, int semid_most, int semid_turysta_most, int semid_przewodnik_most, int id_przewodnik, int grupa[], int liczba_w_grupie) {
     printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
     printf("[Przewodnik %d]: Sprawdzam most wiszący...\n", id_przewodnik);
 	
 	semafor_operacja(semid_most, -1);
 	printf("[Przewodnik %d]: Wchodzę na most jako pierwszy z naszej grupy\n", id_przewodnik);
-	printf("[Przewodnik %d]: Przeszedłem przez most i czekam na moją grupę\n", id_przewodnik);
+	printf("[Przewodnik %d]: Przeszedłem przez most\n", id_przewodnik);
 	sleep(1);
 	
     // Wchodzenie turystów na most
     for (int i = 0; i < liczba_w_grupie; i++) {
 		semafor_operacja(semid_turysta_most, 1);
-		sleep(1);
     }
+	printf("[Przewodnik %d]: Czekam aż wszyscy przejdą przez most\n", id_przewodnik);
+	semafor_operacja(semid_przewodnik_most, -liczba_w_grupie); // Wyczekuje na gotowość wszystkich turystów
 	semafor_operacja(semid_most, 1);
     printf("[Przewodnik %d]: Wszyscy z mojej grupy przeszli przez most.\n", id_przewodnik);
 	printf("[Przewodnik %d]: Możemy w takim wypadku iść dalej.\n", id_przewodnik);
