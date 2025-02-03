@@ -23,24 +23,9 @@ int main() {
 	int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 	int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
 	
-	// Tworzymy segment pamięci współdzielonej
-    key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
-    int shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0666);
-    if (shm_id == -1) {
-        perror("shmget");
-        exit(1);
-    }
-
-    SharedData *shm_ptr = (SharedData *)shmat(shm_id, NULL, 0);
-    if (shm_ptr == (void *)-1) {
-        perror("shmat");
-        exit(1);
-    }
-
-    // Inicjalizowanie danych w pamięci współdzielonej
-    if (shm_ptr->liczba_osob_na_moscie == 0) {
-		shm_ptr->liczba_osob_na_moscie = 0;  // Zapobieganie zerowaniu liczby w wypadku dołączenia nowego przewodnika
-	}
+	// Inicjalizacja pamięci współdzielonej
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
 	
 	printf(GRN "-------Symulacja parku krajobrazowego - Turysta %d-------\n\n" RESET,id_turysta);
 
@@ -128,10 +113,20 @@ int main() {
         printf("[Turysta %d] został wezwany do kasy\n", id_turysta);
     }
 	
-	// Komunikat do kasjera
-    sprintf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d",id_turysta, typ_trasy);
-    kom.mtype = KASJER;
-    printf("[Turysta %d] przekazuje kasjerowi, że chce kupić bilet na trasę %d\n", id_turysta, typ_trasy);
+	// Wyodrębnienie PID kasjera z komunikatu
+    int pid_kasjera = 0;
+    char *ptr = strstr(kom.mtext, "od ");
+    if (ptr != NULL) {
+        pid_kasjera = atoi(ptr + 3);
+    } else {
+        fprintf(stderr, "Nie udało się odczytać PID kasjera\n");
+        exit(1);
+    }
+	
+	// Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
+    sprintf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d",id_turysta, wiek, typ_trasy);
+    kom.mtype = pid_kasjera;
+    printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet na trasę %d\n", id_turysta, pid_kasjera, typ_trasy);
 	msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
     // Odbiór biletu
@@ -155,7 +150,7 @@ int main() {
 			// Most
 			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
 			semafor_operacja(semid_turysta_most, -1);
-			sleep(rand() % 1 + 1);
+			sleep(rand() % 10 + 1);
 			if(wiek<15){
 				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
 			}else{
@@ -163,7 +158,7 @@ int main() {
 			}
 			sleep(1);
 			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-			sleep(rand() % 2 + 1);
+			sleep(rand() % 10 + 1);
 			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
 			shm_ptr->liczba_osob_na_moscie--;
 			semafor_operacja(semid_przewodnik_most, 1);

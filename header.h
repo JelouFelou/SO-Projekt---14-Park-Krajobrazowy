@@ -4,6 +4,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/sem.h>
+#include <sys/shm.h>
 
 #define N 50 // maksymalna ilość osób w parku w ciągu dnia
 #define K 4 // liczba kas
@@ -24,20 +25,13 @@ struct komunikat {
     char mtext[MAX];
 };
 
-// Struktura pamięci współdzielonej
-typedef struct {
-    int liczba_osob_na_moscie;
-	int liczba_osob_na_wiezy;
-	int liczba_osob_na_promie
-	int most_kierunek;
-} SharedData;
-
 union semun {
     int val;
     struct semid_ds *buf;
     unsigned short *array;
 };
 
+// Wykonuje operacje na semaforze, zmieniając jego wartość o 'zmiana'
 void semafor_operacja(int semid, int zmiana) {
     struct sembuf operacja = {0, zmiana, 0};
     if (semop(semid, &operacja, 1) == -1) {
@@ -45,5 +39,38 @@ void semafor_operacja(int semid, int zmiana) {
         exit(1);
     }
 }
+
+// Struktura pamięci współdzielonej
+typedef struct {
+    int liczba_osob_na_moscie;
+	int liczba_osob_na_wiezy;
+	int liczba_osob_na_promie;
+	int most_kierunek;
+	int czekajacy_przewodnicy;
+} SharedData;
+
+// Inicjalizacja Pamięci Współdzielonej
+SharedData* shm_init(int* shm_id){
+	// Tworzymy segment pamięci współdzielonej
+    key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
+    *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0666);
+    if (*shm_id == -1) {
+        perror("shmget");
+        exit(1);
+    }
+
+    SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
+    if (shm_ptr == (void *)-1) {
+        perror("shmat");
+        exit(1);
+    }
+
+    // Inicjalizowanie danych w pamięci współdzielonej
+    if (shm_ptr->liczba_osob_na_moscie == 0) {
+		shm_ptr->liczba_osob_na_moscie = 0;  // Zapobieganie zerowaniu liczby w wypadku dołączenia nowego przewodnika
+	}
+	return shm_ptr;
+}
+
 
 #endif

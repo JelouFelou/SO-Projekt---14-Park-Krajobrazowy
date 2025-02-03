@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <time.h>
 #include <math.h>
 #include "header.h"
 #include "trasa.h"
@@ -33,15 +34,16 @@ int main() {
 		return 0;
 	}
 	if(X3>=(1.5*M)){
-		printf("X1 musi być mniejsze od 1.5M, aktualnie 1.5M = %.2f\n",1.5*M);
+		printf("X3 musi być mniejsze od 1.5M, aktualnie 1.5M = %.2f\n",1.5*M);
 		return 0;
 	}
 	
 	struct komunikat kom;
 	int id_przewodnik = getpid();
-	int id_turysta, typ_trasy, wiek;
+	int id_turysta, typ_trasy, wiek, id_kasjer;
 	int wyczekuje = 1;
 	
+	// Klucze do kolejki i semaforów								 
 	key_t key_kolejka, key_semafor_wyjscie, key_semafor_wycieczka;
 	key_t key_most, key_wieza, key_prom;
 	key_t key_turysta_most, key_turysta_wieza, key_turysta_prom;
@@ -123,8 +125,9 @@ int main() {
 	}
 	
 	
-	union semun arg;
+
 	// Inicjalizacja semaforów
+	union semun arg;					
     arg.val = 0;
 		semctl(semid_wyjscie, 0, SETVAL, arg);
 		semctl(semid_wycieczka, 0, SETVAL, arg);
@@ -156,12 +159,18 @@ int main() {
             perror("msgrcv failed");
             continue;
         }
-        
-        sscanf(kom.mtext, "%d %d %d", &id_turysta, &typ_trasy, &wiek);
+        sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
+		printf(">>>[Turysta %d] dołącza do trasy %d (od kasjera %d)\n", id_turysta, typ_trasy, id_kasjer);
+
+		kom.mtype = id_kasjer;
+		sprintf(kom.mtext, "OK %d", id_turysta);
+		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+
 
         printf(">>>[Turysta %d] dołącza do trasy %d\n", id_turysta, typ_trasy);
-        grupa[liczba_w_grupie++] = id_turysta;
-		wiek_turysty[liczba_w_grupie++] = wiek;
+        grupa[liczba_w_grupie] = id_turysta;
+        wiek_turysty[liczba_w_grupie] = wiek;
+        liczba_w_grupie++;
 
         if (liczba_w_grupie == M) {
 			sleep(2);
