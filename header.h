@@ -8,11 +8,15 @@
 
 #define N 50 // maksymalna ilość osób w parku w ciągu dnia
 #define K 4 // liczba kas
-#define M 3 // wielkość grupy odprowadzanej przez przewodnika
+#define M 2 // wielkość grupy odprowadzanej przez przewodnika
 #define P 4 // liczba przewodników
+#define T 5 // określony czas pokonania rzeki w jedną stronę
 #define MAX 256
 #define KASJER 1  // typ komunikatu do kasjera
 #define PRZEWODNIK 2 // typ komunikatu do przewodnika
+#define X1 1   // Maksymalna liczba osób na moście (X1<M)
+#define X2 2   // Maksymalna liczba osób na wieży (X2<2M)
+#define X3 2   // Maksymalna liczba osób na promie (X3<1.5*M)
 
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
@@ -46,7 +50,15 @@ typedef struct {
 	int liczba_osob_na_wiezy;
 	int liczba_osob_na_promie;
 	int most_kierunek;
-	int czekajacy_przewodnicy;
+	int prom_kierunek;
+	int prom_zajete;
+	int czekajacy_przewodnicy_most;
+	int czekajacy_przewodnicy_prom;
+	int przewodnicy_most;
+	int klatka_pierwsza;
+	int klatka_druga;
+	int turysci_trasa_1;
+	int turysci_trasa_2;
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej
@@ -64,11 +76,6 @@ SharedData* shm_init(int* shm_id){
         perror("shmat");
         exit(1);
     }
-
-    // Inicjalizowanie danych w pamięci współdzielonej
-    if (shm_ptr->liczba_osob_na_moscie == 0) {
-		shm_ptr->liczba_osob_na_moscie = 0;  // Zapobieganie zerowaniu liczby w wypadku dołączenia nowego przewodnika
-	}
 	return shm_ptr;
 }
 
