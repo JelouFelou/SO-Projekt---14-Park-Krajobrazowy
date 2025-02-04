@@ -111,9 +111,49 @@ int main() {
 		sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-		msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0);
-		printf("[Kasjer %d] Otrzymał potwierdzenie od przewodnika!\n", id_kasjer);
-
+		int proba = 0, max_proba = 3;
+		int zaakceptowanie = 0;
+		while (proba < max_proba) {
+            if (msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0) == -1) {
+                perror("msgrcv from PRZEWODNIK failed");
+                continue;
+            }
+			
+            // Jeżeli przewodnik zaakceptował turystę, wysyłamy potwierdzenie do kasy
+            if (strncmp(kom.mtext, "OK", 2) == 0) {
+				printf("[Kasjer %d] Otrzymał potwierdzenie od przewodnika dla turysty %d!\n", id_kasjer, id_turysta);
+				zaakceptowanie++;
+				break;
+			}else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
+				printf("[Kasjer %d] Otrzymał odrzucenie od przewodnika dla turysty %d, szukam następnego!\n", id_kasjer, id_turysta);
+				proba++;
+				if (proba < max_proba) {
+					kom.mtype = PRZEWODNIK;
+					sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
+					if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
+						perror("msgsnd to PRZEWODNIK (retry) failed");
+					}
+				} else {
+					printf("[Kasjer %d] Maksymalna liczba prób osiągnięta dla turysty %d. Anuluję przydzielanie przewodnika.\n", id_kasjer, id_turysta);
+					break;
+				}
+			}else{
+				printf("[Kasjer %d] Otrzymał nieoczekiwany komunikat: %s\n", id_kasjer, kom.mtext);
+				break;
+			}
+		}
+		
+		if (zaakceptowanie) {
+        // Jeśli przewodnik zaakceptował turystę, wysyłamy potwierdzenie do turysty.
+			kom.mtype = id_turysta;
+			sprintf(kom.mtext, "OK");
+			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		} else {
+        // Jeśli nie udało się przydzielić przewodnika, wysyłamy REJECT do turysty.
+			kom.mtype = id_turysta;
+			strcpy(kom.mtext, "REJECT");
+			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		}
 
         sleep(2);
 		wyczekuje = 1;

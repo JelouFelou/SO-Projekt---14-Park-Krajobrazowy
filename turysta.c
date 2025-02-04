@@ -150,6 +150,24 @@ int main() {
 		printf("[Turysta %d] odbiera %s\n\n", id_turysta, kom.mtext);
 	}
 	
+	if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1) {
+        perror("msgrcv final message failed");
+        exit(1);
+    } else {
+        if (strncmp(kom.mtext, "OK", 2) == 0) {
+            printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
+        }
+        else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
+            printf("[Turysta %d] otrzymałem odrzucenie od kasjera: %s\n", id_turysta, kom.mtext);
+            printf("[Turysta %d] opuszcza park...\n", id_turysta);
+            exit(0);
+        }
+        else {
+            printf("[Turysta %d] otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+            exit(1);
+        }
+    }
+	
 	// ---- Przewodnik ----
 	
 	sleep(2);

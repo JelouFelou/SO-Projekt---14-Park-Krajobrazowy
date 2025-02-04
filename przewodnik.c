@@ -23,6 +23,7 @@ int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
 int semid_przeplyniecie;
 int wymuszony_start=0;
+int przypisana_trasa = 0;
 
 
 int main() {
@@ -180,7 +181,27 @@ int main() {
 				continue;
 			}
         }else{
+		// Odczytujemy informacje o turyście
         sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
+		
+		//Sprawdzamy przypisaną trasę
+		if (liczba_w_grupie == 0) {
+            // Pierwszy turysta – przypisujemy przewodnikowi dany typ
+            przypisana_trasa = typ_trasy;
+            printf("[Przewodnik %d]: Ustawiam typ trasy na %d\n", id_przewodnik, przypisana_trasa);
+        } else {
+            // Kolejne zgłoszenia – sprawdzamy zgodność typu trasy
+            if (typ_trasy != przypisana_trasa) {
+                printf(RED "[Przewodnik %d]: Odrzucam turystę %d, typ trasy %d nie pasuje do mojej trasy %d\n" RESET,id_przewodnik, id_turysta, typ_trasy, przypisana_trasa);
+                kom.mtype = id_kasjer;
+                strcpy(kom.mtext, "REJECT");
+                if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
+                    perror("msgsnd reject failed");
+                }
+                continue; // Pomijamy tego turystę – może spróbuje dołączyć do innego przewodnika
+            }
+        }
+		
 		printf(">>>[Turysta %d] dołącza do trasy %d (od kasjera %d)\n", id_turysta, typ_trasy, id_kasjer);
 
 		kom.mtype = id_kasjer;
@@ -228,7 +249,7 @@ int main() {
 				pomylka=1;
 			}
 			if(!pomylka){
-				char lista_wychodzących[MAX] = ""; // Inicjalizacja pustej listy
+				char lista_wychodzacych[MAX] = ""; // Inicjalizacja pustej listy
 
 				// Zerowanie grupy przed każdorazowym użyciem
 				for (int i = 0; i < M; i++) {
@@ -239,16 +260,16 @@ int main() {
 					if (grupa[i] != 0) {
 						char temp[10];
 						sprintf(temp, "%d,", grupa[i]);  // Konwersja ID turysty do stringa
-						if (strlen(lista_wychodzących) + strlen(temp) < MAX) { // Sprawdzanie, czy pomieści się w buforze
-							strcat(lista_wychodzących, temp); // Dodanie ID turysty do listy
+						if (strlen(lista_wychodzacych) + strlen(temp) < MAX) { // Sprawdzanie, czy pomieści się w buforze
+							strcat(lista_wychodzacych, temp); // Dodanie ID turysty do listy
 						}
 					}
 				}
 
 				// Sprawdzamy, czy lista nie jest pusta
-				if (strlen(lista_wychodzących) > 0) {
+				if (strlen(lista_wychodzacych) > 0) {
 					kom.mtype = KASJER; // Ustawienie typu komunikatu
-					strcpy(kom.mtext, lista_wychodzących); // Kopiowanie listy do komunikatu
+					strcpy(kom.mtext, lista_wychodzacych); // Kopiowanie listy do komunikatu
 					if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
 						perror("msgsnd failed");
 					}
@@ -262,11 +283,13 @@ int main() {
 				// Resetowanie liczby turystów i stanu oczekiwania
 				liczba_w_grupie = 0;
 				wyczekuje = 1;
+				przypisana_trasa=0;
 			}else{
 				sleep(1);
 				pomylka=0;
 				liczba_w_grupie = 0;
 				wyczekuje = 1;
+				przypisana_trasa=0;
 			}
 			printf("\n");
         }
