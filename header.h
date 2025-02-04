@@ -17,6 +17,7 @@
 #define X1 1   // Maksymalna liczba osób na moście (X1<M)
 #define X2 2   // Maksymalna liczba osób na wieży (X2<2M)
 #define X3 2   // Maksymalna liczba osób na promie (X3<1.5*M)
+#define LIMIT_CZEKANIA 10
 
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
@@ -59,6 +60,9 @@ typedef struct {
 	int klatka_druga;
 	int turysci_trasa_1;
 	int turysci_trasa_2;
+	int liczba_turystow;
+	int wieza_sygnal;
+	int ilosc_przewodnikow;
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej

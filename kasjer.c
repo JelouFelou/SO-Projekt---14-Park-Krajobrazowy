@@ -5,10 +5,11 @@
 #include <sys/sem.h>
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
 #include "header.h"
 
-int turysci_w_parku[N];  // Rejestracja turystów
-int liczba_turystow = 0;
+void reset_pamieci_wspoldzielonej(int);
+int sygnal=0;
 
 int main() {
 	struct komunikat kom;
@@ -17,6 +18,10 @@ int main() {
 	int IDkolejki, semid_kasa;
 	key_t key_kolejka, key_semafor_kasa;
 	int wyczekuje = 1;
+
+	// Inicjalizacja pamięci współdzielonej
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
 
 	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
 
@@ -39,6 +44,7 @@ int main() {
     arg.val = 1;
 		semctl(semid_kasa, 0, SETVAL, arg);
 	
+	signal(SIGUSR1, reset_pamieci_wspoldzielonej);
 	
     while (1) {
         // Oczekiwanie na komunikat od turysty o typie KASJER (ogólne zgłoszenie)
@@ -46,8 +52,13 @@ int main() {
 		
 		// Pobranie turysty z kolejki
         if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
-            perror("msgrcv failed");
-            continue;
+            if(sygnal){
+				sygnal=0;
+				continue;
+			}else{
+				perror("msgrcv failed");
+				continue;
+			}
         }
 
 		// Wywołanie turysty do kasy – wyciągamy PID turysty z komunikatu
@@ -61,7 +72,6 @@ int main() {
 
 		
         printf(GRN "[Kasjer %d] wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
-		turysci_w_parku[liczba_turystow++] = id_turysta; // Dodaje turystę do parku
 		sleep(2);
 		
         // Wysyłanie zgody na podejście
@@ -71,10 +81,15 @@ int main() {
 		
 		// Odbiór komunikatu od turysty – tym razem turysta wysyła wiadomość na mtype równy PID kasjera
         if (msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0) == -1) {
-            perror("msgrcv failed");
-            continue;
+            if(sygnal){
+				sygnal=0;
+				continue;
+			}else{
+				perror("msgrcv failed");
+				continue;
+			}
         }
-
+		shm_ptr->liczba_turystow++;
 		// Pobranie typu trasy oraz wieku z komunikatu
 		int typ_trasy = 0, wiek = 0;
 		sscanf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d", &id_turysta, &wiek, &typ_trasy);
@@ -106,4 +121,31 @@ int main() {
 	}
 
     return 0;
+}
+
+void reset_pamieci_wspoldzielonej(int sig){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	sygnal=1;
+	shm_ptr->liczba_osob_na_moscie = 0;
+    shm_ptr->liczba_osob_na_wiezy = 0;
+    shm_ptr->liczba_osob_na_promie = 0;
+    shm_ptr->most_kierunek = 0;
+    shm_ptr->prom_kierunek = 0;
+    shm_ptr->prom_zajete = 0;
+	shm_ptr->czekajacy_przewodnicy_most = 0;
+    shm_ptr->czekajacy_przewodnicy_prom = 0;
+    shm_ptr->przewodnicy_most = 0;
+    shm_ptr->klatka_pierwsza = 0;
+    shm_ptr->klatka_druga = 0;
+    shm_ptr->turysci_trasa_1 = 0;
+	shm_ptr->turysci_trasa_2 = 0;
+    shm_ptr->liczba_turystow = 0;
+	shm_ptr->wieza_sygnal = 0;
+	shm_ptr->ilosc_przewodnikow = 0;
+	
+	printf(YEL"Reset pamięci współdzielonej został wykonany.\n"RESET);
+
+    shmdt(shm_ptr);
 }

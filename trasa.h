@@ -4,9 +4,9 @@
 #include "header.h"
 #include <time.h>
 
-#define LIMIT_CZEKANIA 5
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr);
 void PrzeplywPromem(int typ_trasy, int id_przewodnik, int *prom_przewodnik, SharedData *shm_ptr, int semid_przeplyniecie);
+void handler_wieza_sygnal(int);
 
 // -------Most Wiszący-------
 void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_turysta_most, int semid_przewodnik_most, int id_przewodnik, int grupa[], int liczba_w_grupie) {
@@ -79,6 +79,8 @@ void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_p
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	
+	signal(SIGUSR1, handler_wieza_sygnal);
+	
 	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n", id_przewodnik);
 	
@@ -95,6 +97,10 @@ void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_p
 			}	
 			break;
 		}
+		if (shm_ptr->wieza_sygnal) {
+            printf("[Przewodnik %d]: Proszę wszystkich o zejście z wieży.\n", id_przewodnik);
+            break;
+        }
     }
 	printf("[Przewodnik %d]: Czekam aż wszyscy zejdą z wieży widokowej\n", id_przewodnik);
 	semafor_operacja(semid_przewodnik_wieza, -liczba_w_grupie); // Wyczekuje na gotowość wszystkich turystów
@@ -214,4 +220,11 @@ void PrzeplywPromem(int typ_trasy, int id_przewodnik, int *prom_przewodnik, Shar
     }
 }
 
+void handler_wieza_sygnal(int sig) {
+    int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	shm_ptr->wieza_sygnal = 1;
+	sleep(5);
+	shm_ptr->wieza_sygnal = 0;
+}
 #endif

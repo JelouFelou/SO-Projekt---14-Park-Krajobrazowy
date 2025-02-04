@@ -11,9 +11,8 @@
 #include "header.h"
 #include "trasa.h"
 
-#define SEM_KEY 'A'
-
 void awaryjne_wyjscie(int);
+void rozpoczecie_wycieczki(int);
 
 int grupa[M];
 int wiek_turysty[M];
@@ -23,9 +22,21 @@ int semid_most, semid_wieza, semid_prom;
 int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
 int semid_przeplyniecie;
+int wymuszony_start=0;
 
 
 int main() {
+	// Inicjalizacja pamięci współdzielonej
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	if(shm_ptr->ilosc_przewodnikow==P){
+		printf("W danej chwili może być uruchomionych max %d przewodników\n",P);
+		exit(1);
+	}else{
+		shm_ptr->ilosc_przewodnikow++;
+	}
+	
 	if(X1>=M){
 		printf("X1 musi być mniejsze od M, aktualnie M = %d\n",M);
 		return 0;
@@ -41,8 +52,9 @@ int main() {
 	
 	struct komunikat kom;
 	int id_przewodnik = getpid();
-	int id_turysta, typ_trasy, wiek, id_kasjer;
+	int id_turysta, typ_trasy = 0, wiek, id_kasjer;
 	int wyczekuje = 1;
+	int pomylka = 0;
 	
 	// Klucze do kolejki i semaforów								 
 	key_t key_kolejka, key_semafor_wyjscie, key_semafor_wycieczka;
@@ -152,18 +164,22 @@ int main() {
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
 	signal(SIGINT,awaryjne_wyjscie); 
-	
+	signal(SIGUSR1,rozpoczecie_wycieczki);
 
     while (1) {
-		if(wyczekuje == 1){ // Wyświetli tylko raz | wyczekuje turystę zamiast za każdym razem jak turysta dołączy
+		if(wyczekuje){ // Wyświetli tylko raz | wyczekuje turystę zamiast za każdym razem jak turysta dołączy
 			printf(YEL "[Przewodnik %d] wyczekuje turystów\n" RESET, id_przewodnik);
 			wyczekuje=0;
 		}
-		
+			
         if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, 0) == -1) {
-            perror("msgrcv failed");
-            continue;
-        }
+			if (wymuszony_start){
+				printf(YEL"\n[Przewodnik %d]: Dostałem sygnał wymuszonego startu wycieczki\n"RESET, id_przewodnik);
+			}else{
+				perror("msgrcv failed");
+				continue;
+			}
+        }else{
         sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
 		printf(">>>[Turysta %d] dołącza do trasy %d (od kasjera %d)\n", id_turysta, typ_trasy, id_kasjer);
 
@@ -176,16 +192,16 @@ int main() {
         grupa[liczba_w_grupie] = id_turysta;
         wiek_turysty[liczba_w_grupie] = wiek;
         liczba_w_grupie++;
-
-        if (liczba_w_grupie == M) {
+		}
+        if (liczba_w_grupie == M || wymuszony_start == 1) {
 			sleep(2);
-            printf(GRN"\n[Przewodnik %d]: \"Grupa zapełniona! Oprowadzę was po trasie %d\"\n"RESET,id_przewodnik, typ_trasy);
+			wymuszony_start=0;
+            printf(GRN"\n[Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET, id_przewodnik, liczba_w_grupie, typ_trasy);
             sleep(1);
 			semafor_operacja(semid_wycieczka, M);
-			
 			// Inna trasa zależna od typ_trasy
 			switch(typ_trasy) {
-				case 1:
+			case 1:
 				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
 				sleep(1);
 				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
@@ -207,42 +223,51 @@ int main() {
 				sleep(1);
 				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
 				break;
+			default:
+				printf(YEL"\n[Przewodnik %d]: Coś mi tu nie gra... nie mam kogo oprowadzać...\n"RESET, id_przewodnik);
+				pomylka=1;
 			}
+			if(!pomylka){
+				char lista_wychodzących[MAX] = ""; // Inicjalizacja pustej listy
 
-            char lista_wychodzących[MAX] = ""; // Inicjalizacja pustej listy
+				// Zerowanie grupy przed każdorazowym użyciem
+				for (int i = 0; i < M; i++) {
+					grupa[i] = 0; // Upewnij się, że grupa jest początkowo pusta
+				}
 
-			// Zerowanie grupy przed każdorazowym użyciem
-			for (int i = 0; i < M; i++) {
-				grupa[i] = 0; // Upewnij się, że grupa jest początkowo pusta
-			}
-
-			for (int i = 0; i < M; i++) {
-				if (grupa[i] != 0) {
-					char temp[10];
-					sprintf(temp, "%d,", grupa[i]);  // Konwersja ID turysty do stringa
-					if (strlen(lista_wychodzących) + strlen(temp) < MAX) { // Sprawdzanie, czy pomieści się w buforze
-						strcat(lista_wychodzących, temp); // Dodanie ID turysty do listy
+				for (int i = 0; i < M; i++) {
+					if (grupa[i] != 0) {
+						char temp[10];
+						sprintf(temp, "%d,", grupa[i]);  // Konwersja ID turysty do stringa
+						if (strlen(lista_wychodzących) + strlen(temp) < MAX) { // Sprawdzanie, czy pomieści się w buforze
+							strcat(lista_wychodzących, temp); // Dodanie ID turysty do listy
+						}
 					}
 				}
-			}
 
-			// Sprawdzamy, czy lista nie jest pusta
-			if (strlen(lista_wychodzących) > 0) {
-				kom.mtype = KASJER; // Ustawienie typu komunikatu
-				strcpy(kom.mtext, lista_wychodzących); // Kopiowanie listy do komunikatu
-				if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
-					perror("msgsnd failed");
+				// Sprawdzamy, czy lista nie jest pusta
+				if (strlen(lista_wychodzących) > 0) {
+					kom.mtype = KASJER; // Ustawienie typu komunikatu
+					strcpy(kom.mtext, lista_wychodzących); // Kopiowanie listy do komunikatu
+					if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
+						perror("msgsnd failed");
+					}
+				} else {
+					sleep(rand() % 4 + 3);
+					printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
 				}
-			} else {
-				sleep(rand() % 4 + 3);
-				printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
+
+				semafor_operacja(semid_wyjscie, M);
+
+				// Resetowanie liczby turystów i stanu oczekiwania
+				liczba_w_grupie = 0;
+				wyczekuje = 1;
+			}else{
+				sleep(1);
+				pomylka=0;
+				liczba_w_grupie = 0;
+				wyczekuje = 1;
 			}
-
-			semafor_operacja(semid_wyjscie, M);
-
-			// Resetowanie liczby turystów i stanu oczekiwania
-			liczba_w_grupie = 0;
-			wyczekuje = 1;
 			printf("\n");
         }
     }
@@ -258,6 +283,9 @@ void awaryjne_wyjscie(int sig_n) {
     extern int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 	extern int semid_przewodnik_most, semid_przewodnik_prom, semid_przewodnik_wieza;
     
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	shm_ptr->ilosc_przewodnikow--;
 
     struct komunikat kom;
     char lista_wychodzacych[MAX] = "";
@@ -315,4 +343,8 @@ void awaryjne_wyjscie(int sig_n) {
 
     // Zamykamy proces po wykonaniu awaryjnego wyjścia
     exit(0);
+}
+
+void rozpoczecie_wycieczki(int sig_n){
+	wymuszony_start=1;
 }
