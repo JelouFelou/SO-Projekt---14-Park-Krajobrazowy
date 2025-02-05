@@ -69,7 +69,7 @@ typedef struct {
 SharedData* shm_init(int* shm_id){
 	// Tworzymy segment pamięci współdzielonej
     key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
-    *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0666);
+    *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
     if (*shm_id == -1) {
         perror("shmget");
         exit(1);

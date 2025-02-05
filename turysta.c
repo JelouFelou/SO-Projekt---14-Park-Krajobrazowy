@@ -5,8 +5,11 @@
 #include <sys/sem.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 #include <string.h>
 #include "header.h"
+
+void przedwczesne_wyjscie(int);
 
 int main() {
 	srand(time(NULL));
@@ -36,71 +39,73 @@ int main() {
 		shm_ptr->liczba_turystow++;
 	}
 	
+	signal(SIGTERM,przedwczesne_wyjscie);
+	
 	printf(GRN "-------Symulacja parku krajobrazowego - Turysta %d-------\n\n" RESET,id_turysta);
 
     // Pobieranie ID kolejki komunikatów
 	key_kolejka = ftok(".", 98);
-    if ((IDkolejki = msgget(key_kolejka, 0666)) == -1) {
+    if ((IDkolejki = msgget(key_kolejka, 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 
     // Pobieranie ID semafora
 	key_semafor_kasa = ftok(".", 99);
-    if ((semid_kasa = semget(key_semafor_kasa, 1, 0666)) == -1) {
+    if ((semid_kasa = semget(key_semafor_kasa, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Koniec wycieczki
 	key_semafor_wyjscie = ftok(".", 100);
-	if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, 0666)) == -1) {
+	if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialny za informacje o rozpoczęciu wycieczki
 	key_semafor_wycieczka = ftok(".", 101);
-	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, 0666)) == -1) {
+	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie turystą podczas pobytu na moście, wieży i promie
 	key_turysta_most = ftok(".", 102);
-	if ((semid_turysta_most = semget(key_turysta_most, 1, 0666)) == -1) {
+	if ((semid_turysta_most = semget(key_turysta_most, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_wieza = ftok(".", 103);
-	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, 0666)) == -1) {
+	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_prom = ftok(".", 104);
-	if ((semid_turysta_prom = semget(key_turysta_prom, 1, 0666)) == -1) {
+	if ((semid_turysta_prom = semget(key_turysta_prom, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie przewodnikiem podczas pobytu na moście, wieży i promie
 	key_przewodnik_most = ftok(".", 105);
-	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, 0666)) == -1) {
+	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_wieza = ftok(".", 106);
-	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, 0666)) == -1) {
+	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_prom = ftok(".", 107);
-	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, 0666)) == -1) {
+	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przeplyniecie = ftok(".", 108);
-	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, 0666)) == -1) {
+	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
@@ -113,7 +118,7 @@ int main() {
 	printf("> [Turysta %d] podchodzi do kasy\n\n",id_turysta);
 	
 	// Próba zajęcia semafora (czeka, jeśli kasa zajęta)
-	semafor_operacja(semid_kasa, -1);
+	//semafor_operacja(semid_kasa, -1);
 	
 	// Zgłoszenie do kolejki
     sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
@@ -155,7 +160,14 @@ int main() {
         exit(1);
     } else {
         if (strncmp(kom.mtext, "OK", 2) == 0) {
+			int nowy_typ;
             printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
+			if (sscanf(kom.mtext, "OK %d", &nowy_typ) == 1) {
+                typ_trasy = nowy_typ;
+            } else {
+                printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+                exit(1);
+            }
         }
         else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
             int nowy_typ;
@@ -337,4 +349,9 @@ int main() {
 	
 	shmdt(shm_ptr);
     return 0;
+}
+
+void przedwczesne_wyjscie(int sig_n){
+	printf("[Turysta] przedwcześnie opuszcza park\n");
+    exit(1);
 }

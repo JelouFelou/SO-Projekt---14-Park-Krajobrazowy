@@ -79,7 +79,7 @@ void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_p
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	
-	signal(SIGUSR1, handler_wieza_sygnal);
+	signal(SIGUSR2, handler_wieza_sygnal);
 	
 	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n", id_przewodnik);
@@ -109,6 +109,7 @@ void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_p
 	// Zwolnienie segmentu pamięci współdzielonej
 	shmdt(shm_ptr);
 }
+
 
 // -------Płynięcie promem-------
 void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom, int semid_przeplyniecie, int id_przewodnik, int grupa[], int liczba_w_grupie) {
@@ -187,6 +188,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 	// Zwolnienie segmentu pamięci współdzielonej
     shmdt(shm_ptr);
 }
+
 
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
     if (typ_trasy == 1) {

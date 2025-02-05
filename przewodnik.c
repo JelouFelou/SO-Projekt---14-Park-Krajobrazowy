@@ -13,6 +13,7 @@
 
 void awaryjne_wyjscie(int);
 void rozpoczecie_wycieczki(int);
+void przedwczesne_wyjscie(int);
 
 int grupa[M];
 int wiek_turysty[M];
@@ -69,77 +70,77 @@ int main() {
 	
 	// Pobieranie ID kolejki komunikatów
 	key_kolejka = ftok(".", 98);
-    if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0666)) == -1) {
+    if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 	
 	// Koniec wycieczki
 	key_semafor_wyjscie = ftok(".", 100);
-    if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0666)) == -1) {
+    if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialny za informacje o rozpoczęciu wycieczki
 	key_semafor_wycieczka = ftok(".", 101);
-	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie turystą podczas pobytu na moście, wieży i promie
 	key_turysta_most = ftok(".", 102);
-	if ((semid_turysta_most = semget(key_turysta_most, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_turysta_most = semget(key_turysta_most, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_wieza = ftok(".", 103);
-	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_prom = ftok(".", 104);
-	if ((semid_turysta_prom = semget(key_turysta_prom, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_turysta_prom = semget(key_turysta_prom, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie przewodnikiem podczas pobytu na moście, wieży i promie
 	key_przewodnik_most = ftok(".", 105);
-	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_wieza = ftok(".", 106);
-	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_prom = ftok(".", 107);
-	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przeplyniecie = ftok(".", 108);
-	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za kontrolę dostępu do atrakcji przez innych przewodników
 	key_most = ftok(".", 200);
-	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora mostu");
 		exit(1);
 	}
 	key_wieza = ftok(".", 201);
-	if ((semid_wieza = semget(key_wieza, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_wieza = semget(key_wieza, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora wieży");
 		exit(1);
 	}
 	key_prom = ftok(".", 202);
-	if ((semid_prom = semget(key_prom, 1, IPC_CREAT | 0666)) == -1) {
+	if ((semid_prom = semget(key_prom, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora promu");
 		exit(1);
 	}
@@ -166,6 +167,7 @@ int main() {
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
 	signal(SIGINT,awaryjne_wyjscie); 
 	signal(SIGUSR1,rozpoczecie_wycieczki);
+	signal(SIGTERM,przedwczesne_wyjscie);
 
     while (1) {
 		if(wyczekuje){ // Wyświetli tylko raz | wyczekuje turystę zamiast za każdym razem jak turysta dołączy
@@ -201,8 +203,6 @@ int main() {
                 continue; // Pomijamy tego turystę – może spróbuje dołączyć do innego przewodnika
             }
         }
-		
-		printf(">>>[Turysta %d] dołącza do trasy %d (od kasjera %d)\n", id_turysta, typ_trasy, id_kasjer);
 
 		kom.mtype = id_kasjer;
 		sprintf(kom.mtext, "OK %d", id_turysta);
@@ -249,48 +249,21 @@ int main() {
 				pomylka=1;
 			}
 			if(!pomylka){
-				char lista_wychodzacych[MAX] = ""; // Inicjalizacja pustej listy
-
 				// Zerowanie grupy przed każdorazowym użyciem
 				for (int i = 0; i < M; i++) {
 					grupa[i] = 0; // Upewnij się, że grupa jest początkowo pusta
 				}
 
-				for (int i = 0; i < M; i++) {
-					if (grupa[i] != 0) {
-						char temp[10];
-						sprintf(temp, "%d,", grupa[i]);  // Konwersja ID turysty do stringa
-						if (strlen(lista_wychodzacych) + strlen(temp) < MAX) { // Sprawdzanie, czy pomieści się w buforze
-							strcat(lista_wychodzacych, temp); // Dodanie ID turysty do listy
-						}
-					}
-				}
-
-				// Sprawdzamy, czy lista nie jest pusta
-				if (strlen(lista_wychodzacych) > 0) {
-					kom.mtype = KASJER; // Ustawienie typu komunikatu
-					strcpy(kom.mtext, lista_wychodzacych); // Kopiowanie listy do komunikatu
-					if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
-						perror("msgsnd failed");
-					}
-				} else {
-					sleep(rand() % 4 + 3);
-					printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
-				}
-
+				printf("Wszyscy turyści bezpiecznie dotarli do kasy.\n");
 				semafor_operacja(semid_wyjscie, M);
-
-				// Resetowanie liczby turystów i stanu oczekiwania
-				liczba_w_grupie = 0;
-				wyczekuje = 1;
-				przypisana_trasa=0;
-			}else{
+				
+			}else{ // W wypadku gdy było zero turystów, będzie się to wykonywało
 				sleep(1);
 				pomylka=0;
-				liczba_w_grupie = 0;
-				wyczekuje = 1;
-				przypisana_trasa=0;
 			}
+			liczba_w_grupie = 0;
+			przypisana_trasa=0;
+			wyczekuje = 1;
 			printf("\n");
         }
     }
@@ -302,7 +275,7 @@ void awaryjne_wyjscie(int sig_n) {
     extern int liczba_w_grupie;  // Liczba turystów w grupie
     extern int IDkolejki;  // ID kolejki komunikatów
     extern int semid_most, semid_wieza, semid_prom;
-	extern int semid_wycieczka, semid_wyjscie;
+	extern int semid_wycieczka, semid_wyjscie, semid_przeplyniecie;
     extern int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 	extern int semid_przewodnik_most, semid_przewodnik_prom, semid_przewodnik_wieza;
     
@@ -311,34 +284,12 @@ void awaryjne_wyjscie(int sig_n) {
 	shm_ptr->ilosc_przewodnikow--;
 
     struct komunikat kom;
-    char lista_wychodzacych[MAX] = "";
 
     printf(RED"\nWyjście awaryjne! Turystyka przerywana! Prosimy o powrót do kasy!\n"RESET);
 
-	for (int i = 0; i < M; i++) {
-        grupa[i] = 0;
-    }
-
-    // Tworzymy listę turystów, którzy muszą opuścić park
-    for (int i = 0; i < liczba_w_grupie; i++) {
-        if (grupa[i] != 0) {
-            char temp[10];
-            sprintf(temp, "%d,", grupa[i]);
-            if (strlen(lista_wychodzacych) + strlen(temp) < MAX) {
-                strcat(lista_wychodzacych, temp);
-            }
-        }
-    }
-
-    // Wysyłamy komunikat do kasy, że turyści wychodzą
-    if (strlen(lista_wychodzacych) > 0) {
-        kom.mtype = KASJER;
-        strcpy(kom.mtext, lista_wychodzacych);
-        if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
-            perror("msgsnd failed");
-        }
-    } else {
-		printf(GRN"Wszyscy turyści zostali wysłani do kasy.\n"RESET);
+	// Kończy procesy turystów z jego grupy
+	for (int i = 0; i < liczba_w_grupie; i++){
+		kill(grupa[i], SIGTERM);
 	}
 	
 	// Zwolnienie miejsc w semaforach dla turystów, aby uniknąć blokady
@@ -349,14 +300,15 @@ void awaryjne_wyjscie(int sig_n) {
     }
 
     // Zwolnienie semaforów
-    semafor_operacja(semid_turysta_most, M);
-    semafor_operacja(semid_turysta_wieza, M);
-	semafor_operacja(semid_turysta_prom, M);
-	semafor_operacja(semid_przewodnik_most, M);
-	semafor_operacja(semid_przewodnik_wieza, M);
-	semafor_operacja(semid_przewodnik_prom, M);
-    semafor_operacja(semid_wycieczka, M);
-    semafor_operacja(semid_wyjscie, M);
+    semafor_operacja(semid_turysta_most, liczba_w_grupie);
+    semafor_operacja(semid_turysta_wieza, liczba_w_grupie);
+	semafor_operacja(semid_turysta_prom, liczba_w_grupie);
+	semafor_operacja(semid_przewodnik_most, liczba_w_grupie);
+	semafor_operacja(semid_przewodnik_wieza, liczba_w_grupie);
+	semafor_operacja(semid_przewodnik_prom, liczba_w_grupie);
+    semafor_operacja(semid_wycieczka, liczba_w_grupie);
+    semafor_operacja(semid_wyjscie, liczba_w_grupie);
+	semafor_operacja(semid_przeplyniecie, liczba_w_grupie);
 
     // Przywracamy stan początkowy grupy
     liczba_w_grupie = 0;  // Grupa została opróżniona
@@ -370,4 +322,13 @@ void awaryjne_wyjscie(int sig_n) {
 
 void rozpoczecie_wycieczki(int sig_n){
 	wymuszony_start=1;
+}
+
+void przedwczesne_wyjscie(int sig_n){
+	printf("[Przewodnik] przedwcześnie opuszcza park\n");
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	shm_ptr->ilosc_przewodnikow--;
+	shmdt(shm_ptr);
+    exit(1);
 }
