@@ -149,7 +149,7 @@ int main() {
 		if (zaakceptowanie) {
         // Jeśli przewodnik zaakceptował turystę, wysyłamy potwierdzenie do turysty.
 			kom.mtype = id_turysta;
-			sprintf(kom.mtext, "OK %d"typ_trasy);
+			sprintf(kom.mtext, "OK %d",typ_trasy);
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		} else {
         // Jeśli nie udało się przydzielić przewodnika, wysyłamy REJECT z propozycją zmiany trasy do turysty.
