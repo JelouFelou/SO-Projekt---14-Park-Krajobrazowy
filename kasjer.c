@@ -111,7 +111,7 @@ int main() {
 		sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-		int proba = 0, max_proba = 3;
+		int proba = 0, max_proba = P;
 		int zaakceptowanie = 0;
 		while (proba < max_proba) {
             if (msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0) == -1) {
@@ -134,7 +134,7 @@ int main() {
 						perror("msgsnd to PRZEWODNIK (retry) failed");
 					}
 				} else {
-					printf("[Kasjer %d] Maksymalna liczba prób osiągnięta dla turysty %d. Anuluję przydzielanie przewodnika.\n", id_kasjer, id_turysta);
+					printf("[Kasjer %d] Maksymalna liczba prób osiągnięta dla turysty %d.\n", id_kasjer, id_turysta);
 					break;
 				}
 			}else{
@@ -149,10 +149,17 @@ int main() {
 			sprintf(kom.mtext, "OK");
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		} else {
-        // Jeśli nie udało się przydzielić przewodnika, wysyłamy REJECT do turysty.
+        // Jeśli nie udało się przydzielić przewodnika, wysyłamy REJECT z propozycją zmiany trasy do turysty.
 			kom.mtype = id_turysta;
-			strcpy(kom.mtext, "REJECT");
+			typ_trasy = (typ_trasy == 1) ? 2 : 1;
+			sprintf(kom.mtext, "REJECT %d",typ_trasy);
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+			printf("[Kasjer %d] Daje turyscie propozycję zmiany typu trasy, tak żeby przewodnik był w stanie oprowadzić pełną grupę.\n", id_kasjer, id_turysta);
+			kom.mtype = PRZEWODNIK;
+			sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
+			if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
+				perror("msgsnd to PRZEWODNIK (retry) failed");
+			}
 		}
 
         sleep(2);

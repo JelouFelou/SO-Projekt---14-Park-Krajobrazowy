@@ -158,9 +158,16 @@ int main() {
             printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
         }
         else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
-            printf("[Turysta %d] otrzymałem odrzucenie od kasjera: %s\n", id_turysta, kom.mtext);
-            printf("[Turysta %d] opuszcza park...\n", id_turysta);
-            exit(0);
+            int nowy_typ;
+            // Parsujemy nowy typ trasy przesłany przez kasjera
+            if (sscanf(kom.mtext, "REJECT %d", &nowy_typ) == 1) {
+                typ_trasy = nowy_typ;
+                printf("[Turysta %d] Otrzymałem propozycję zmiany trasy. Nowa trasa: %d.\n", id_turysta, typ_trasy);
+                // Następuje powtórzenie pętli – wysłanie nowego żądania z aktualnym typem trasy.
+            } else {
+                printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+                exit(1);
+            }
         }
         else {
             printf("[Turysta %d] otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
