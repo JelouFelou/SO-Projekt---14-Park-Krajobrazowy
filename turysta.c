@@ -45,67 +45,67 @@ int main() {
 
     // Pobieranie ID kolejki komunikatów
 	key_kolejka = ftok(".", 98);
-    if ((IDkolejki = msgget(key_kolejka, 0600)) == -1) {
+    if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
 
     // Pobieranie ID semafora
 	key_semafor_kasa = ftok(".", 99);
-    if ((semid_kasa = semget(key_semafor_kasa, 1, 0600)) == -1) {
+    if ((semid_kasa = semget(key_semafor_kasa, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Koniec wycieczki
 	key_semafor_wyjscie = ftok(".", 100);
-	if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, 0600)) == -1) {
+	if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialny za informacje o rozpoczęciu wycieczki
 	key_semafor_wycieczka = ftok(".", 101);
-	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, 0600)) == -1) {
+	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie turystą podczas pobytu na moście, wieży i promie
 	key_turysta_most = ftok(".", 102);
-	if ((semid_turysta_most = semget(key_turysta_most, 1, 0600)) == -1) {
+	if ((semid_turysta_most = semget(key_turysta_most, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_wieza = ftok(".", 103);
-	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, 0600)) == -1) {
+	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_turysta_prom = ftok(".", 104);
-	if ((semid_turysta_prom = semget(key_turysta_prom, 1, 0600)) == -1) {
+	if ((semid_turysta_prom = semget(key_turysta_prom, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	
 	// Odpowiedzialne za sterowanie przewodnikiem podczas pobytu na moście, wieży i promie
 	key_przewodnik_most = ftok(".", 105);
-	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, 0600)) == -1) {
+	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_wieza = ftok(".", 106);
-	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, 0600)) == -1) {
+	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przewodnik_prom = ftok(".", 107);
-	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, 0600)) == -1) {
+	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
 	key_przeplyniecie = ftok(".", 108);
-	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, 0600)) == -1) {
+	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, IPC_CREAT | 0600)) == -1) {
         perror("semget() błąd");
         exit(1);
     }
@@ -144,8 +144,8 @@ int main() {
 	
 	// Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
     sprintf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d",id_turysta, wiek, typ_trasy);
-    kom.mtype = pid_kasjera;
-    printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet na trasę %d\n", id_turysta, pid_kasjera, typ_trasy);
+    kom.mtype = id_turysta;
+    printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet na trasę %d\n", id_turysta, id_kasjer, typ_trasy);
 	msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
     // Odbiór biletu
@@ -201,7 +201,7 @@ int main() {
 		//A Most 
 			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
 			semafor_operacja(semid_turysta_most, -1);
-			sleep(rand() % 10 + 1);
+			sleep(TMOST);
 			if(wiek<15){
 				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
 			}else{
@@ -209,7 +209,7 @@ int main() {
 			}
 			sleep(1);
 			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-			sleep(rand() % 10 + 1);
+			sleep(TMOST);
 			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
 			shm_ptr->liczba_osob_na_moscie--;
 			semafor_operacja(semid_przewodnik_most, 1);
@@ -226,7 +226,7 @@ int main() {
 				shm_ptr->klatka_pierwsza++;
 				printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
 			}
-			sleep(rand() % 10 + 1);
+			sleep(TWIEZA);
 			shm_ptr->klatka_pierwsza--;
 			printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
 			sleep(1);
@@ -234,19 +234,15 @@ int main() {
 			if(shm_ptr->wieza_sygnal == 1){
 				printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
 			}else{
-				sleep(rand() % 6 + 1);
-				if(shm_ptr->wieza_sygnal == 1){
-					printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
-				}else{
-					shm_ptr->klatka_druga++;
-					printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-					sleep(rand() % 10 + 1);
-					shm_ptr->klatka_druga--;
-					printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
-				}
+				shm_ptr->klatka_druga++;
+				printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
+				sleep(TWIEZA);
+				shm_ptr->klatka_druga--;
+				printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
 			}
 			sleep(1);
 			semafor_operacja(semid_przewodnik_wieza, 1);
+			
 		//C Prom
 			printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
 			semafor_operacja(semid_turysta_prom, -1);
@@ -286,7 +282,7 @@ int main() {
 			printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
 			semafor_operacja(semid_przewodnik_prom, 1);
 			
-		//B Wieża Widokowa
+		//B Wieża Widokowa 
 			printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 			semafor_operacja(semid_turysta_wieza, -1);
 			if(wiek<=5){
@@ -294,39 +290,31 @@ int main() {
 			}else if(wiek<15){
 				shm_ptr->klatka_pierwsza++;
 				printf("[Turysta %d]: Wchodzę na wieżę pod opieką osoby dorosłej...\n", id_turysta);
-				sleep(rand() % 10 + 1);
-				shm_ptr->klatka_pierwsza--;
-				printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
-				sleep(1);
-				printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-				sleep(rand() % 7 + 1);
-				shm_ptr->klatka_druga++;
-				printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-				sleep(rand() % 10 + 1);
-				shm_ptr->klatka_druga--;
-				printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
 			}else{
 				shm_ptr->klatka_pierwsza++;
 				printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
-				sleep(rand() % 10 + 1);
-				shm_ptr->klatka_pierwsza--;
-				printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
-				sleep(1);
-				printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-				sleep(rand() % 7 + 1);
+			}
+			sleep(TWIEZA);
+			shm_ptr->klatka_pierwsza--;
+			printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
+			sleep(1);
+			printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
+			if(shm_ptr->wieza_sygnal == 1){
+				printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+			}else{
 				shm_ptr->klatka_druga++;
 				printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-				sleep(rand() % 10 + 1);
+				sleep(TWIEZA);
 				shm_ptr->klatka_druga--;
 				printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
 			}
 			sleep(1);
-			semafor_operacja(semid_przewodnik_wieza, 1);	
-		
-		//A Most
+			semafor_operacja(semid_przewodnik_wieza, 1);
+			
+		//A Most 
 			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
 			semafor_operacja(semid_turysta_most, -1);
-			sleep(rand() % 10 + 1);
+			sleep(TMOST);
 			if(wiek<15){
 				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
 			}else{
@@ -334,10 +322,10 @@ int main() {
 			}
 			sleep(1);
 			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-			sleep(rand() % 10 + 1);
+			sleep(TMOST);
 			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
 			shm_ptr->liczba_osob_na_moscie--;
-			semafor_operacja(semid_przewodnik_most, 1);	
+			semafor_operacja(semid_przewodnik_most, 1);
 			
 		// Koniec wycieczki
 			printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);

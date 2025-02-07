@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 #include "header.h"
 
 void reset_pamieci_wspoldzielonej(int);
@@ -49,8 +50,10 @@ int main() {
 	
     while (1) {
         // Oczekiwanie na komunikat od turysty o typie KASJER (ogólne zgłoszenie)
-		printf(YEL "[Kasjer %d] wyczekuje turysty\n" RESET, id_kasjer);
-		
+		if(wyczekuje==1){
+			printf(YEL "[Kasjer %d] wyczekuje turysty\n" RESET, id_kasjer);
+			wyczekuje=0;
+		}
 		// Pobranie turysty z kolejki
         if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
             if(sygnal){
@@ -70,10 +73,18 @@ int main() {
 				id_turysta = strtol(pid_start, NULL, 10);
 			}
 		}
-
-		
-        printf(GRN "[Kasjer %d] wzywa turystę %d do kasy\n" RESET, id_kasjer, id_turysta);
-		sleep(2);
+	
+		if (kill(id_turysta, 0) == 0) {
+		}else{
+            if (errno == ESRCH) {
+				// Turysta o tym PID nie istnieje, zostaje pominięty
+			} else if (errno == EPERM) {
+				// Turysta o tym PID nie istnieje, zostaje pominięty
+			} else {
+				printf("Inny błąd\n");
+			}
+			continue;
+		}
 		
         // Wysyłanie zgody na podejście
         kom.mtype = id_turysta;
@@ -164,7 +175,7 @@ int main() {
 				perror("msgsnd to PRZEWODNIK (retry) failed");
 			}
 		}
-
+		wyczekuje=1;
         sleep(2);
 		//semafor_operacja(semid_kasa, 1);
 	}

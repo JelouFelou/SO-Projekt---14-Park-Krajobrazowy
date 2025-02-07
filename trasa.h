@@ -200,7 +200,7 @@ void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
 
 void PrzeplywPromem(int typ_trasy, int id_przewodnik, int *prom_przewodnik, SharedData *shm_ptr, int semid_przeplyniecie) {
     printf(BLU "[Prom]: Odpłynął na drugą stronę\n" RESET);
-    sleep(T);
+    sleep(TPROM);
 
     // Zamiana strony
     shm_ptr->prom_kierunek = (typ_trasy == 1) ? 2 : 1;

@@ -186,6 +186,18 @@ int main() {
 		// Odczytujemy informacje o turyście
         sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
 		
+		if (kill(id_turysta, 0) == 0) {
+		}else{
+            if (errno == ESRCH) {
+				// Turysta o tym PID nie istnieje, zostaje pominięty
+			} else if (errno == EPERM) {
+				// Turysta o tym PID nie istnieje, zostaje pominięty
+			} else {
+				printf("Inny błąd\n");
+			}
+			continue;
+		}
+		
 		//Sprawdzamy przypisaną trasę
 		if (liczba_w_grupie == 0) {
             // Pierwszy turysta – przypisujemy przewodnikowi dany typ
@@ -329,6 +341,9 @@ void przedwczesne_wyjscie(int sig_n){
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
+	for (int i = 0; i < liczba_w_grupie; i++){
+		kill(grupa[i], SIGTERM);
+	}
 	shmdt(shm_ptr);
     exit(1);
 }

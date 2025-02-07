@@ -7,17 +7,20 @@
 #include <sys/shm.h>
 
 #define N 50 // maksymalna ilość osób w parku w ciągu dnia
-#define K 4 // liczba kas
 #define M 2 // wielkość grupy odprowadzanej przez przewodnika
 #define P 4 // liczba przewodników
-#define T 5 // określony czas pokonania rzeki w jedną stronę
-#define MAX 256
-#define KASJER 1  // typ komunikatu do kasjera
-#define PRZEWODNIK 2 // typ komunikatu do przewodnika
 #define X1 1   // Maksymalna liczba osób na moście (X1<M)
 #define X2 2   // Maksymalna liczba osób na wieży (X2<2M)
 #define X3 2   // Maksymalna liczba osób na promie (X3<1.5*M)
-#define LIMIT_CZEKANIA 10
+
+#define TMOST 5 // określony czas pokonania mostu
+#define TWIEZA 5 // określony czas pokonania wiezy
+#define TPROM 5 // określony czas pokonania rzeki
+
+#define MAX 256 // maksymalna długość wiadomości
+#define KASJER 1  // typ komunikatu do kasjera
+#define PRZEWODNIK 2 // typ komunikatu do przewodnika
+
 
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
