@@ -5,6 +5,7 @@
 #include <sys/msg.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
+#include <errno.h>
 
 #define N 50 // maksymalna ilość osób w parku w ciągu dnia
 #define M 2 // wielkość grupy odprowadzanej przez przewodnika
@@ -46,6 +47,24 @@ void semafor_operacja(int semid, int zmiana) {
         perror("Błąd semop");
         exit(1);
     }
+}
+
+int czy_istnieje(int pid) {
+	if (kill(pid, 0) == 0) {
+		// Proces istnieje.
+        return 1;
+	}else{
+        if (errno == ESRCH) {
+			// Proces o tym PID nie istnieje, zostaje pominięty
+			return 0;
+		} else if (errno == EPERM) {
+			// Proces o tym PID nie istnieje, zostaje pominięty (Proces nie ma odpowiednich uprawnień)
+			return 0;
+		} else {
+			printf("Inny błąd\n");
+			return 0;
+		}
+	}
 }
 
 // Struktura pamięci współdzielonej

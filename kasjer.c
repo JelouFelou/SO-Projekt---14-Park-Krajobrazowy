@@ -16,6 +16,8 @@ int sygnal=0;
 int main() {
 	struct komunikat kom;
     int id_kasjer = getpid();
+	int typ_trasy = 0;
+	int wiek = 0;
 	
 	int IDkolejki, semid_kasa;
 	key_t key_kolejka, key_semafor_kasa;
@@ -48,13 +50,18 @@ int main() {
 	
 	signal(SIGUSR1, reset_pamieci_wspoldzielonej);
 	
+	
+// ---- Pętla kasjera ----
     while (1) {
         // Oczekiwanie na komunikat od turysty o typie KASJER (ogólne zgłoszenie)
 		if(wyczekuje==1){
 			printf(YEL "[Kasjer %d] wyczekuje turysty\n" RESET, id_kasjer);
 			wyczekuje=0;
 		}
-		// Pobranie turysty z kolejki
+		
+	// ---- Turysta ----
+		
+		//1. Pobranie turysty z kolejki
         if (msgrcv(IDkolejki, &kom, MAX, KASJER, 0) == -1) {
             if(sygnal){
 				sygnal=0;
@@ -65,7 +72,7 @@ int main() {
 			}
         }
 
-		// Wywołanie turysty do kasy – wyciągamy PID turysty z komunikatu
+		//2. Wywołanie turysty do kasy – wyciągamy PID turysty z komunikatu
         int id_turysta = 0;
 		if (strstr(kom.mtext, "[Turysta") != NULL) {
 			char *pid_start = strchr(kom.mtext, ' ') + 1;
@@ -74,15 +81,8 @@ int main() {
 			}
 		}
 	
-		if (kill(id_turysta, 0) == 0) {
-		}else{
-            if (errno == ESRCH) {
-				// Turysta o tym PID nie istnieje, zostaje pominięty
-			} else if (errno == EPERM) {
-				// Turysta o tym PID nie istnieje, zostaje pominięty
-			} else {
-				printf("Inny błąd\n");
-			}
+		// Sprawdzamy czy turysta o tym PID nadal istnieje
+		if (!czy_istnieje(id_turysta)) {
 			continue;
 		}
 		
@@ -91,7 +91,7 @@ int main() {
         sprintf(kom.mtext, "Zapraszamy do kasy - od %d",id_kasjer);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		
-		// Odbiór komunikatu od turysty – tym razem turysta wysyła wiadomość na mtype równy PID kasjera
+		//3. Odbiór komunikatu od turysty – tym razem turysta wysyła wiadomość na mtype równy PID kasjera
         if (msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0) == -1) {
             if(sygnal){
 				sygnal=0;
@@ -101,32 +101,31 @@ int main() {
 				continue;
 			}
         }
-		// Pobranie typu trasy oraz wieku z komunikatu
-		int typ_trasy = 0, wiek = 0;
-		sscanf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d", &id_turysta, &wiek, &typ_trasy);
+		
+		// Ustalenie informacji o turyście
+		typ_trasy = (rand() % 2) + 1;
+		wiek = (rand() % 80) + 1;
 		sleep(1);
 		
-		if(typ_trasy==0){
-			typ_trasy=1;
-		}
-		
-		// Wydawanie biletu
+		//4. Wysyłanie biletu – wiadomość kierowana do turysty
 		if(wiek < 8){
 			printf("[Kasjer %d] Dzieci poniżej 8 roku życia nie płacą za bilet\n\n", id_kasjer);
 		}
 		printf("[Kasjer %d] wydaje bilet na trasę %d turyście %d\n\n", id_kasjer, typ_trasy, id_turysta);
 		
-		// Wysyłanie biletu – wiadomość kierowana do turysty
 		kom.mtype = id_turysta;
-        sprintf(kom.mtext, "bilet na trasę %d", typ_trasy);
+        sprintf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d", typ_trasy, wiek);
         msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		
+	// ---- Przewodnik ----
 		
 		// Przekazuje turystę do przewodnika
 		kom.mtype = PRZEWODNIK;
 		sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-		int proba = 0, max_proba = P;
+		// Próba przyjęcia turysty przez przewodnika
+		int proba = 0, max_proba = 3;
 		int zaakceptowanie = 0;
 		while (proba < max_proba) {
             if (msgrcv(IDkolejki, &kom, MAX, id_kasjer, 0) == -1) {
@@ -157,17 +156,18 @@ int main() {
 			}
 		}
 		
+		// Przewodnik zaakceptował turystę
 		if (zaakceptowanie) {
-        // Jeśli przewodnik zaakceptował turystę, wysyłamy potwierdzenie do turysty.
 			kom.mtype = id_turysta;
 			sprintf(kom.mtext, "OK %d",typ_trasy);
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		} else {
-        // Jeśli nie udało się przydzielić przewodnika, wysyłamy REJECT z propozycją zmiany trasy do turysty.
+        // Nie udało się przydzielić przewodnika, wysyłamy REJECT z propozycją zmiany trasy do turysty.
 			kom.mtype = id_turysta;
 			typ_trasy = (typ_trasy == 1) ? 2 : 1;
 			sprintf(kom.mtext, "REJECT %d",typ_trasy);
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+			
 			printf("[Kasjer %d] Daje turyscie propozycję zmiany typu trasy, tak żeby przewodnik był w stanie oprowadzić pełną grupę.\n", id_kasjer);
 			kom.mtype = PRZEWODNIK;
 			sprintf(kom.mtext, "%d %d %d %d", id_turysta, typ_trasy, wiek, id_kasjer);
@@ -175,9 +175,9 @@ int main() {
 				perror("msgsnd to PRZEWODNIK (retry) failed");
 			}
 		}
+		
 		wyczekuje=1;
         sleep(2);
-		//semafor_operacja(semid_kasa, 1);
 	}
 
     return 0;

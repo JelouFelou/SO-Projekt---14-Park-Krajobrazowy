@@ -10,14 +10,22 @@
 #include "header.h"
 
 void przedwczesne_wyjscie(int);
+void TurystaMost();
+void TurystaWieza();
+void TurystaProm();
 
 int main() {
 	srand(time(NULL));
 	struct komunikat kom;
 	int id_turysta = getpid();
-    int typ_trasy = (rand() % 2) + 1; // Turysta decyduje jaką trasę chce wybrać
-	int wiek = (rand() % 80) + 1;
-	//int vip = (rand() % 100 == 47);
+	int vip = (rand() % 100 == 47);
+	int typ_trasy = 0;
+	int wiek = 0;
+	
+	if(vip){
+		int typ_trasy = (rand() % 2) + 1;
+		int wiek = (rand() % 80) + 1;
+	}
 	
     key_t key_kolejka, key_semafor_kasa, key_semafor_wyjscie, key_semafor_wycieczka;
     key_t key_turysta_most, key_turysta_wieza, key_turysta_prom;
@@ -110,228 +118,112 @@ int main() {
         exit(1);
     }
 	
-	
-	// ---- Kasjer ----
 
+// Początek symulacji turysty
 	printf(">>> Do parku wchodzi [Turysta %d]\n", id_turysta);
 	sleep(1);
-	printf("> [Turysta %d] podchodzi do kasy\n\n",id_turysta);
 	
-	// Próba zajęcia semafora (czeka, jeśli kasa zajęta)
-	//semafor_operacja(semid_kasa, -1);
+	if(!vip){ // Turysta nie jest vipem
+		printf("> [Turysta %d] podchodzi do kasy\n\n",id_turysta);
 	
-	// Zgłoszenie do kolejki
-    sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
-    kom.mtype = KASJER;
-    msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
+	// ---- Kasjer ----
+	
+		//1. Zgłoszenie do kolejki
+		sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
+		kom.mtype = KASJER;
+		msgsnd(IDkolejki, (struct msgbuf *)&kom, strlen(kom.mtext) + 1, 0);
 
-    // Oczekiwanie na wezwanie do kasy
-    if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
-        perror("msgrcv failed");
-    } else {
-        printf("[Turysta %d] został wezwany do kasy\n", id_turysta);
-    }
+		//2. Oczekiwanie na wezwanie do kasy
+		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
+			perror("msgrcv failed");
+		} else {
+			printf("[Turysta %d] został wezwany do kasy\n", id_turysta);
+		}
+		
+		// Wyodrębnienie PID kasjera z komunikatu
+		int id_kasjer = 0;
+		char *ptr = strstr(kom.mtext, "od ");
+		if (ptr != NULL) {
+			id_kasjer = atoi(ptr + 3);
+		} else {
+			fprintf(stderr, "Nie udało się odczytać PID kasjera\n");
+			exit(1);
+		}
 	
-	// Wyodrębnienie PID kasjera z komunikatu
-    int pid_kasjera = 0;
-    char *ptr = strstr(kom.mtext, "od ");
-    if (ptr != NULL) {
-        pid_kasjera = atoi(ptr + 3);
-    } else {
-        fprintf(stderr, "Nie udało się odczytać PID kasjera\n");
-        exit(1);
-    }
-	
-	// Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
-    sprintf(kom.mtext, "[Turysta %d](wiek %d) chce kupić bilet na trasę %d",id_turysta, wiek, typ_trasy);
-    kom.mtype = id_turysta;
-    printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet na trasę %d\n", id_turysta, id_kasjer, typ_trasy);
-	msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		//3. Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
+		kom.mtype = id_kasjer;
+		sprintf(kom.mtext, "[Turysta %d] chce kupić bilet",id_turysta);
+		printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet\n", id_turysta, id_kasjer);
+		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-    // Odbiór biletu
-    if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1)  {
-		perror("msgrcv failed");
-	} else {
-		printf("[Turysta %d] odbiera %s\n\n", id_turysta, kom.mtext);
-	}
-	
-	if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1) {
-        perror("msgrcv final message failed");
-        exit(1);
-    } else {
-        if (strncmp(kom.mtext, "OK", 2) == 0) {
-			int nowy_typ;
-            printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
-			if (sscanf(kom.mtext, "OK %d", &nowy_typ) == 1) {
-                typ_trasy = nowy_typ;
-            } else {
-                printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-                exit(1);
-            }
-        }
-        else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
-            int nowy_typ;
-            // Parsujemy nowy typ trasy przesłany przez kasjera
-            if (sscanf(kom.mtext, "REJECT %d", &nowy_typ) == 1) {
-                typ_trasy = nowy_typ;
-                printf("[Turysta %d] Otrzymałem propozycję zmiany trasy. Nowa trasa: %d.\n", id_turysta, typ_trasy);
-                // Następuje powtórzenie pętli – wysłanie nowego żądania z aktualnym typem trasy.
-            } else {
-                printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-                exit(1);
-            }
-        }
-        else {
-            printf("[Turysta %d] otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-            exit(1);
-        }
-    }
-	
+		//4. Odbiór biletu
+		if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1)  {
+			perror("msgrcv failed");
+		} else {
+			printf("[Turysta %d] odbiera %s\n\n", id_turysta, kom.mtext);
+			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d", &typ_trasy, &wiek);
+		}
+		
 	// ---- Przewodnik ----
 	
-	sleep(2);
-	printf("[Turysta %d] otrzymał bilet i idzie do przewodnika\n", id_turysta);
-
-    printf("[Turysta %d] czeka na rozpoczęcie oprowadzania...\n", id_turysta);
-	semafor_operacja(semid_wycieczka, -1);
-	printf("[Turysta %d] jest podekscytowany zwiedzaniem parku!\n", id_turysta);
+		// Próba przyjęcia turysty przez przewodnika
+		if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1) {
+			perror("msgrcv final message failed");
+			exit(1);
+		} else {
+			// Turysta został przyjęty
+			if (strncmp(kom.mtext, "OK", 2) == 0) { 
+				printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
+				if (sscanf(kom.mtext, "OK %d", &typ_trasy) == 1) {
+				} else {
+					printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+					exit(1);
+				}
+			}
+			// Turysta jest odrzucony, zmiana trasy
+			else if (strncmp(kom.mtext, "REJECT", 6) == 0) { 
+				if (sscanf(kom.mtext, "REJECT %d", &typ_trasy) == 1) {
+					printf("[Turysta %d] Otrzymałem propozycję zmiany trasy. Nowa trasa: %d.\n", id_turysta, typ_trasy);
+					// Następuje powtórzenie pętli – wysłanie nowego żądania z aktualnym typem trasy.
+				} else {
+					printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+					exit(1);
+				}
+			} else {
+				printf("[Turysta %d] otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+				exit(1);
+			}
+		}
 	
-	switch(typ_trasy){
-		case(1):
-		//A Most 
-			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
-			semafor_operacja(semid_turysta_most, -1);
-			sleep(TMOST);
-			if(wiek<15){
-				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
-			}
-			sleep(1);
-			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-			sleep(TMOST);
-			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
-			shm_ptr->liczba_osob_na_moscie--;
-			semafor_operacja(semid_przewodnik_most, 1);
-			
-		//B Wieża Widokowa 
-			printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
-			semafor_operacja(semid_turysta_wieza, -1);
-			if(wiek<=5){
-				printf("[Turysta %d]: Czekam pod wieżą aż reszta grupy zejdzie...\n", id_turysta);
-			}else if(wiek<15){
-				shm_ptr->klatka_pierwsza++;
-				printf("[Turysta %d]: Wchodzę na wieżę pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				shm_ptr->klatka_pierwsza++;
-				printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
-			}
-			sleep(TWIEZA);
-			shm_ptr->klatka_pierwsza--;
-			printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
-			sleep(1);
-			printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-			if(shm_ptr->wieza_sygnal == 1){
-				printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
-			}else{
-				shm_ptr->klatka_druga++;
-				printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-				sleep(TWIEZA);
-				shm_ptr->klatka_druga--;
-				printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
-			}
-			sleep(1);
-			semafor_operacja(semid_przewodnik_wieza, 1);
-			
-		//C Prom
-			printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
-			semafor_operacja(semid_turysta_prom, -1);
-			
-			if(wiek<15){
-				printf("[Turysta %d]: Wchodzę na prom pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				printf("[Turysta %d]: Wchodzę na prom...\n", id_turysta);
-			}
-			sleep(2);
-			printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
-			semafor_operacja(semid_przeplyniecie, -1);
-			printf("[Turysta %d]: Przeplynąłem promem na drugą stronę\n", id_turysta);
-			sleep(2);
-			printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
-			semafor_operacja(semid_przewodnik_prom, 1);
-			
+		sleep(2);
+		printf("[Turysta %d] otrzymał bilet i idzie do przewodnika\n", id_turysta);
+
+		printf("[Turysta %d] czeka na rozpoczęcie oprowadzania...\n", id_turysta);
+		semafor_operacja(semid_wycieczka, -1);
+		printf("[Turysta %d] jest podekscytowany zwiedzaniem parku!\n", id_turysta);
+	
+		// Wycieczka zależna od typu trasy
+		switch(typ_trasy){
+			case(1):
+				TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				TurystaWieza(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				TurystaProm(semid_turysta_most, semid_przewodnik_most, semid_przeplyniecie, wiek, id_turysta);
+				break;
+			case(2):
+				TurystaProm(semid_turysta_most, semid_przewodnik_most, semid_przeplyniecie, wiek, id_turysta);
+				TurystaWieza(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				break;
+		}
+		
 		// Koniec wycieczki
-			printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);
-			semafor_operacja(semid_wyjscie, -1);
-			break;
-		case(2):
-		//C Prom
-			printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
-			semafor_operacja(semid_turysta_prom, -1);
-			
-			if(wiek<15){
-				printf("[Turysta %d]: Wchodzę na prom pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				printf("[Turysta %d]: Wchodzę na prom...\n", id_turysta);
-			}
-			sleep(2);
-			printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
-			semafor_operacja(semid_przeplyniecie, -1);
-			printf("[Turysta %d]: Przeplynąłem promem na drugą stronę\n", id_turysta);
-			sleep(2);
-			printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
-			semafor_operacja(semid_przewodnik_prom, 1);
-			
-		//B Wieża Widokowa 
-			printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
-			semafor_operacja(semid_turysta_wieza, -1);
-			if(wiek<=5){
-				printf("[Turysta %d]: Czekam pod wieżą aż reszta grupy zejdzie...\n", id_turysta);
-			}else if(wiek<15){
-				shm_ptr->klatka_pierwsza++;
-				printf("[Turysta %d]: Wchodzę na wieżę pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				shm_ptr->klatka_pierwsza++;
-				printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
-			}
-			sleep(TWIEZA);
-			shm_ptr->klatka_pierwsza--;
-			printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
-			sleep(1);
-			printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-			if(shm_ptr->wieza_sygnal == 1){
-				printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
-			}else{
-				shm_ptr->klatka_druga++;
-				printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-				sleep(TWIEZA);
-				shm_ptr->klatka_druga--;
-				printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
-			}
-			sleep(1);
-			semafor_operacja(semid_przewodnik_wieza, 1);
-			
-		//A Most 
-			printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
-			semafor_operacja(semid_turysta_most, -1);
-			sleep(TMOST);
-			if(wiek<15){
-				printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
-			}else{
-				printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
-			}
-			sleep(1);
-			printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-			sleep(TMOST);
-			printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
-			shm_ptr->liczba_osob_na_moscie--;
-			semafor_operacja(semid_przewodnik_most, 1);
-			
-		// Koniec wycieczki
-			printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);
-			semafor_operacja(semid_wyjscie, -1);
-			break;
+		printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);
+		semafor_operacja(semid_wyjscie, -1);
+		
+	}else{ // Turysta jest vipem
+		printf(YEL"[Turysta %d] jest vipem\n"RESET, id_turysta);
 	}
+	
 	
     printf("[Turysta %d] opuszcza park po zakończeniu trasy\n", id_turysta);
 	
@@ -342,4 +234,78 @@ int main() {
 void przedwczesne_wyjscie(int sig_n){
 	printf("[Turysta] przedwcześnie opuszcza park\n");
     exit(1);
+}
+
+void TurystaMost(int semid_turysta_most, int semid_przewodnik_most, int wiek, int id_turysta){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
+	semafor_operacja(semid_turysta_most, -1);
+	sleep(TMOST);
+	if(wiek<15){
+		printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
+	}else{
+		printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
+	}
+	sleep(1);
+	printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
+	sleep(TMOST);
+	printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
+	shm_ptr->liczba_osob_na_moscie--;
+	semafor_operacja(semid_przewodnik_most, 1);
+}
+
+void TurystaWieza(int semid_turysta_wieza, int semid_przewodnik_wieza, int wiek, int id_turysta){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
+	semafor_operacja(semid_turysta_wieza, -1);
+	if(wiek<=5){
+		printf("[Turysta %d]: Czekam pod wieżą aż reszta grupy zejdzie...\n", id_turysta);
+	}else if(wiek<15){
+		shm_ptr->klatka_pierwsza++;
+		printf("[Turysta %d]: Wchodzę na wieżę pod opieką osoby dorosłej...\n", id_turysta);
+	}else{
+		shm_ptr->klatka_pierwsza++;
+		printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
+	}
+	sleep(TWIEZA);
+	shm_ptr->klatka_pierwsza--;
+	printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
+	sleep(1);
+	printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
+	if(shm_ptr->wieza_sygnal == 1){
+		printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+	}else{
+		shm_ptr->klatka_druga++;
+		printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
+		sleep(TWIEZA);
+		shm_ptr->klatka_druga--;
+		printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
+	}
+	sleep(1);
+	semafor_operacja(semid_przewodnik_wieza, 1);
+}
+
+void TurystaProm(int semid_turysta_prom, int semid_przewodnik_prom, int semid_przeplyniecie, int wiek, int id_turysta){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
+	semafor_operacja(semid_turysta_prom, -1);
+			
+	if(wiek<15){
+		printf("[Turysta %d]: Wchodzę na prom pod opieką osoby dorosłej...\n", id_turysta);
+	}else{
+		printf("[Turysta %d]: Wchodzę na prom...\n", id_turysta);
+	}
+	sleep(2);
+	printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
+	semafor_operacja(semid_przeplyniecie, -1);
+	printf("[Turysta %d]: Przeplynąłem promem na drugą stronę\n", id_turysta);
+	sleep(2);
+	printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
+	semafor_operacja(semid_przewodnik_prom, 1);
 }

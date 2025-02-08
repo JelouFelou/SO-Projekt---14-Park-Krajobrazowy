@@ -169,6 +169,8 @@ int main() {
 	signal(SIGUSR1,rozpoczecie_wycieczki);
 	signal(SIGTERM,przedwczesne_wyjscie);
 
+
+// ---- Pętla przewodnika ----
     while (1) {
 		if(wyczekuje){ // Wyświetli tylko raz | wyczekuje turystę zamiast za każdym razem jak turysta dołączy
 			printf(YEL "[Przewodnik %d] wyczekuje turystów\n" RESET, id_przewodnik);
@@ -186,15 +188,11 @@ int main() {
 		// Odczytujemy informacje o turyście
         sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
 		
-		if (kill(id_turysta, 0) == 0) {
-		}else{
-            if (errno == ESRCH) {
-				// Turysta o tym PID nie istnieje, zostaje pominięty
-			} else if (errno == EPERM) {
-				// Turysta o tym PID nie istnieje, zostaje pominięty
-			} else {
-				printf("Inny błąd\n");
-			}
+		// Sprawdzamy czy turysta o tym PID nadal istnieje
+		if (!czy_istnieje(id_kasjer)) {
+			continue;
+		}
+		if (!czy_istnieje(id_turysta)) {
 			continue;
 		}
 		
