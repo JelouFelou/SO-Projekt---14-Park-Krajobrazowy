@@ -74,34 +74,40 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_turysta_most
 
 
 // -------Wieża Widokowa-------
-void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_przewodnik_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie) { //napraw w trasie A B C
+void TrasaB(int IDkolejki, int semid_wieza, int semid_turysta_wieza, int semid_przewodnik_wieza, int semid_wieza_limit, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie) {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	
+	int i = 0;
 	signal(SIGUSR2, handler_wieza_sygnal);
 	
 	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n", id_przewodnik);
 	
 	// Wchodzenie turystów na wieżę jedną klatką schodową i schodzenie drugą
-	while(1){
+	while(i < liczba_w_grupie){
 		if(shm_ptr->liczba_osob_na_wiezy <= X2){
-			for (int i = 0; i < liczba_w_grupie; i++) {
-				if(wiek_turysty[i]<=5){
-					printf("[Przewodnik %d]: Turysta %d oraz jego opiekun nie może wejść na wieże\n", id_przewodnik, grupa[i]);
-					semafor_operacja(semid_turysta_wieza, 1);
-				}else{
-					semafor_operacja(semid_turysta_wieza, 1);
-				}
-			}	
-			break;
+			if (wiek_turysty[i] <= 5) {
+				// Turysta nie wchodzi:
+				printf("[Przewodnik %d]: Turysta %d oraz jego opiekun nie może wejść na wieżę\n", id_przewodnik, grupa[i]);
+				i++;
+				continue;
+			} else {
+				// Dopuszczenie turysty do wejścia na wieżę
+				shm_ptr->liczba_osob_na_wiezy++;
+				semafor_operacja(semid_turysta_wieza, 1);
+				printf("[Przewodnik %d]: Z mojej grupy na wieże weszło obecnie %d osób\n",id_przewodnik, i);
+				i++;
+				continue;
+			}
+		}else{
+			printf("[Przewodnik %d]: Wieża pełna (obecnie: %d osób). Czekam na zwolnienie miejsca...\n",id_przewodnik, shm_ptr->liczba_osob_na_wiezy);
+			sleep(5);
+			continue;
 		}
-		if (shm_ptr->wieza_sygnal) {
-            printf("[Przewodnik %d]: Proszę wszystkich o zejście z wieży.\n", id_przewodnik);
-            break;
-        }
-    }
+	}
+
 	printf("[Przewodnik %d]: Czekam aż wszyscy zejdą z wieży widokowej\n", id_przewodnik);
 	semafor_operacja(semid_przewodnik_wieza, -liczba_w_grupie); // Wyczekuje na gotowość wszystkich turystów
     printf("[Przewodnik %d]: Wszyscy zeszli z wieży, możemy w takim wypadku iść dalej.\n", id_przewodnik);
@@ -134,8 +140,8 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 		shm_ptr->prom_kierunek=typ_trasy;
 	}
 	
+	// Pętla wykonuje się puki wszyscy nie przepłynęli
 	while(pozostali > 0) {
-		
 		// Sprawdza czy prom jest na jego stronie, jeśli nie czeka poprzez semafor oraz dopisana jest liczba czekających przewodników
 		if(shm_ptr->prom_kierunek != typ_trasy && prom_przewodnik==0) {
             printf(YEL"Prom znajduje się po drugiej stronie, trzeba czekać.\n"RESET);
@@ -171,10 +177,14 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 			PrzeplywPromem(typ_trasy, id_przewodnik, &prom_przewodnik, shm_ptr, semid_przeplyniecie);
 		}
 		
+		// Jeżeli nie ma turystów po żadnej ze stron
 		if (shm_ptr->turysci_trasa_1 == 0 && shm_ptr->turysci_trasa_2 == 0) {
 			printf(BLU "[Prom]: Nie ma już turystów, prom pozostaje gotowy na następną grupę.\n" RESET);
 		} else {
 			shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
+			printf(BLU"[Prom]: Odpłynął na stronę %d\n"RESET,typ_trasy);
+			sleep(TPROM);
+			printf(BLU"[Prom]: Dopłynął na stronę %d\n"RESET,typ_trasy);
 		}
 		
 		// Jeżeli wszyscy turyści z danej grupy przepłynęli to kończymy pętle
@@ -199,13 +209,12 @@ void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
 }
 
 void PrzeplywPromem(int typ_trasy, int id_przewodnik, int *prom_przewodnik, SharedData *shm_ptr, int semid_przeplyniecie) {
-    printf(BLU "[Prom]: Odpłynął na drugą stronę\n" RESET);
-    sleep(TPROM);
-
     // Zamiana strony
     shm_ptr->prom_kierunek = (typ_trasy == 1) ? 2 : 1;
-
-    printf(BLU "[Prom]: Dopłynął na drugą stronę\n" RESET);
+	
+	printf(BLU"[Prom]: Odpłynął na stronę %d\n"RESET,typ_trasy);
+    sleep(TPROM);
+    printf(BLU"[Prom]: Dopłynął na stronę %d\n"RESET,typ_trasy);
 
     // Wysiadają pasażerowie
     for (int i = 0; i < X3; i++) {
@@ -225,6 +234,7 @@ void PrzeplywPromem(int typ_trasy, int id_przewodnik, int *prom_przewodnik, Shar
 void handler_wieza_sygnal(int sig) {
     int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
+	printf(YEL"[Przewodnik]: Proszę wszystkich o zejście z wieży.\n"RESET);
 	shm_ptr->wieza_sygnal = 1;
 	sleep(5);
 	shm_ptr->wieza_sygnal = 0;

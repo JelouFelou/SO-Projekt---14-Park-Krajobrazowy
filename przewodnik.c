@@ -22,7 +22,7 @@ int IDkolejki, semid_wyjscie, semid_wycieczka;
 int semid_most, semid_wieza, semid_prom;
 int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
-int semid_przeplyniecie;
+int semid_przeplyniecie, semid_wieza_limit;
 int wymuszony_start=0;
 int przypisana_trasa = 0;
 
@@ -63,13 +63,13 @@ int main() {
 	key_t key_most, key_wieza, key_prom;
 	key_t key_turysta_most, key_turysta_wieza, key_turysta_prom;
 	key_t key_przewodnik_most, key_przewodnik_wieza, key_przewodnik_prom;
-	key_t key_przeplyniecie;
+	key_t key_przeplyniecie, key_wieza_limit;
 	
 	
 	printf(GRN "-------Symulacja parku krajobrazowego - Przewodnik %d-------\n\n" RESET,id_przewodnik);
 	
 	// Pobieranie ID kolejki komunikatów
-	key_kolejka = ftok(".", 98);
+	key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
@@ -127,6 +127,11 @@ int main() {
         perror("semget() błąd");
         exit(1);
     }
+	key_wieza_limit = ftok(".", 109);
+	if ((semid_wieza_limit = semget(key_wieza_limit, 1, IPC_CREAT | 0600)) == -1) {
+        perror("semget() błąd");
+        exit(1);
+    }
 	
 	// Odpowiedzialne za kontrolę dostępu do atrakcji przez innych przewodników
 	key_most = ftok(".", 200);
@@ -146,7 +151,6 @@ int main() {
 	}
 	
 	
-
 	// Inicjalizacja semaforów
 	union semun arg;					
     arg.val = 0;
@@ -162,6 +166,8 @@ int main() {
 		semctl(semid_most, 0, SETVAL, arg);
 		semctl(semid_wieza, 0, SETVAL, arg);
 		semctl(semid_prom, 0, SETVAL, arg);
+	arg.val = X2;
+		semctl(semid_wieza_limit, 0, SETVAL, arg);
 		
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
@@ -218,11 +224,10 @@ int main() {
 		sprintf(kom.mtext, "OK %d", id_turysta);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
-
-        printf(">>>[Turysta %d] dołącza do trasy %d\n", id_turysta, typ_trasy);
         grupa[liczba_w_grupie] = id_turysta;
         wiek_turysty[liczba_w_grupie] = wiek;
         liczba_w_grupie++;
+		printf(BLU"[Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
 		}
         if (liczba_w_grupie == M || wymuszony_start == 1) {
 			sleep(2);
@@ -235,22 +240,22 @@ int main() {
 			case 1:
 				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
 				sleep(1);
-				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
 				break;
 			case 2:
 				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
 				break;

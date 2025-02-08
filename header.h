@@ -7,12 +7,12 @@
 #include <sys/shm.h>
 #include <errno.h>
 
-#define N 50 // maksymalna ilość osób w parku w ciągu dnia
-#define M 2 // wielkość grupy odprowadzanej przez przewodnika
-#define P 4 // liczba przewodników
-#define X1 1   // Maksymalna liczba osób na moście (X1<M)
-#define X2 2   // Maksymalna liczba osób na wieży (X2<2M)
-#define X3 2   // Maksymalna liczba osób na promie (X3<1.5*M)
+#define N 10000 // maksymalna ilość osób w parku w ciągu dnia
+#define M 10 // wielkość grupy odprowadzanej przez przewodnika
+#define P 10 // liczba przewodników
+#define X1 5   // Maksymalna liczba osób na moście (X1<M)
+#define X2 18   // Maksymalna liczba osób na wieży (X2<2M)
+#define X3 14   // Maksymalna liczba osób na promie (X3<1.5*M)
 
 #define TMOST 5 // określony czas pokonania mostu
 #define TWIEZA 5 // określony czas pokonania wiezy
@@ -78,30 +78,49 @@ typedef struct {
 	int czekajacy_przewodnicy_most;
 	int czekajacy_przewodnicy_prom;
 	int przewodnicy_most;
-	int klatka_pierwsza;
-	int klatka_druga;
 	int turysci_trasa_1;
 	int turysci_trasa_2;
 	int liczba_turystow;
 	int wieza_sygnal;
-	int ilosc_przewodnikow;
+	int ilosc_przewodnikow;	
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej
 SharedData* shm_init(int* shm_id){
 	// Tworzymy segment pamięci współdzielonej
     key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
+	int init;
+	
     *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
     if (*shm_id == -1) {
         perror("shmget");
         exit(1);
-    }
+    }else{
+		init = 1;
+	}
 
     SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
     if (shm_ptr == (void *)-1) {
         perror("shmat");
         exit(1);
-    }
+    }	
+	
+	if(init){
+		shm_ptr->liczba_osob_na_moscie = 0;
+        shm_ptr->liczba_osob_na_wiezy = 0;
+        shm_ptr->liczba_osob_na_promie = 0;
+        shm_ptr->most_kierunek = 0;
+        shm_ptr->prom_kierunek = 0;
+        shm_ptr->prom_zajete = 0;
+        shm_ptr->czekajacy_przewodnicy_most = 0;
+        shm_ptr->czekajacy_przewodnicy_prom = 0;
+        shm_ptr->przewodnicy_most = 0;
+        shm_ptr->turysci_trasa_1 = 0;
+        shm_ptr->turysci_trasa_2 = 0;
+        shm_ptr->liczba_turystow = 0;
+        shm_ptr->wieza_sygnal = 0;
+        shm_ptr->ilosc_przewodnikow = 0;
+	}
 	return shm_ptr;
 }
 

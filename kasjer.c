@@ -19,8 +19,8 @@ int main() {
 	int typ_trasy = 0;
 	int wiek = 0;
 	
-	int IDkolejki, semid_kasa;
-	key_t key_kolejka, key_semafor_kasa;
+	int IDkolejki;
+	key_t key_kolejka;
 	int wyczekuje = 1;
 
 	// Inicjalizacja pamięci współdzielonej
@@ -30,23 +30,11 @@ int main() {
 	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
 
     // Tworzenie kolejki komunikatów
-	key_kolejka = ftok(".", 98);
+	key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
-
-    // Tworzenie semafora kasy
-	key_semafor_kasa = ftok(".", 99);
-    if ((semid_kasa = semget(key_semafor_kasa, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-
-    // Inicjalizacja semafora kasy na wartość 1 (kasa wolna)
-    union semun arg;
-    arg.val = P;
-		semctl(semid_kasa, 0, SETVAL, arg);
 	
 	signal(SIGUSR1, reset_pamieci_wspoldzielonej);
 	
@@ -197,15 +185,13 @@ void reset_pamieci_wspoldzielonej(int sig){
 	shm_ptr->czekajacy_przewodnicy_most = 0;
     shm_ptr->czekajacy_przewodnicy_prom = 0;
     shm_ptr->przewodnicy_most = 0;
-    shm_ptr->klatka_pierwsza = 0;
-    shm_ptr->klatka_druga = 0;
     shm_ptr->turysci_trasa_1 = 0;
 	shm_ptr->turysci_trasa_2 = 0;
     shm_ptr->liczba_turystow = 0;
 	shm_ptr->wieza_sygnal = 0;
 	shm_ptr->ilosc_przewodnikow = 0;
 	
-	printf(YEL"Reset pamięci współdzielonej został wykonany.\n"RESET);
+printf(YEL"[DEBUG] Reset pamięci współdzielonej został wykonany.\n"RESET);
 
     shmdt(shm_ptr);
 }
