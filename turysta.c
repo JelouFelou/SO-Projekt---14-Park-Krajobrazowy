@@ -202,14 +202,14 @@ int main() {
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
 			case(1):
-				//TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
 				TurystaWieza(semid_turysta_wieza, semid_przewodnik_wieza, wiek, id_turysta);
-				//TurystaProm(semid_turysta_prom, semid_przewodnik_prom, semid_przeplyniecie, wiek, id_turysta);
+				TurystaProm(semid_turysta_prom, semid_przewodnik_prom, semid_przeplyniecie, wiek, id_turysta);
 				break;
 			case(2):
-				//TurystaProm(semid_turysta_prom, semid_przewodnik_prom, semid_przeplyniecie, wiek, id_turysta);
+				TurystaProm(semid_turysta_prom, semid_przewodnik_prom, semid_przeplyniecie, wiek, id_turysta);
 				TurystaWieza(semid_turysta_wieza, semid_przewodnik_wieza, wiek, id_turysta);
-				//TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
+				TurystaMost(semid_turysta_most, semid_przewodnik_most, wiek, id_turysta);
 				break;
 		}
 		

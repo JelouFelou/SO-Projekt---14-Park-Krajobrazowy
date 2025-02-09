@@ -210,7 +210,7 @@ int main() {
         } else {
             // Kolejne zgłoszenia – sprawdzamy zgodność typu trasy
             if (typ_trasy != przypisana_trasa) {
-                printf(RED "[Przewodnik %d]: Odrzucam turystę %d, typ trasy %d nie pasuje do mojej trasy %d\n" RESET,id_przewodnik, id_turysta, typ_trasy, przypisana_trasa);
+                printf(RED "[%d][Przewodnik %d]: Odrzucam turystę %d, typ trasy %d nie pasuje do mojej trasy %d\n" RESET,przypisana_trasa,id_przewodnik, id_turysta, typ_trasy, przypisana_trasa);
                 kom.mtype = id_kasjer;
                 strcpy(kom.mtext, "REJECT");
                 if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
@@ -227,37 +227,37 @@ int main() {
         grupa[liczba_w_grupie] = id_turysta;
         wiek_turysty[liczba_w_grupie] = wiek;
         liczba_w_grupie++;
-		printf(BLU"[Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
+		printf(BLU"[%d][Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET,przypisana_trasa, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
 		}
         if (liczba_w_grupie == M || wymuszony_start == 1) {
 			sleep(2);
 			wymuszony_start=0;
-            printf(GRN"\n[Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET, id_przewodnik, liczba_w_grupie, typ_trasy);
+            printf(GRN"\n[%d][Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET,przypisana_trasa, id_przewodnik, liczba_w_grupie, typ_trasy);
             sleep(1);
 			semafor_operacja(semid_wycieczka, M);
 			// Inna trasa zależna od typ_trasy
-			switch(typ_trasy) {
+			switch(przypisana_trasa) {
 			case 1:
-				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
+				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				//TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
+				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			case 2:
-				printf("[Przewodnik %d]: Jesteśmy przy kasach\n", id_przewodnik);
+				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				//TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				TrasaB(IDkolejki, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				printf("[Przewodnik %d]: Wróciliśmy do kas\n", id_przewodnik);
+				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			default:
 				printf(YEL"\n[Przewodnik %d]: Coś mi tu nie gra... nie mam kogo oprowadzać...\n"RESET, id_przewodnik);
