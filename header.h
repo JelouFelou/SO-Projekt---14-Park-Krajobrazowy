@@ -83,6 +83,7 @@ typedef struct {
 	int liczba_turystow;
 	int wieza_sygnal;
 	int ilosc_przewodnikow;	
+	int prom_blokada;
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej
@@ -120,6 +121,7 @@ SharedData* shm_init(int* shm_id){
         shm_ptr->liczba_turystow = 0;
         shm_ptr->wieza_sygnal = 0;
         shm_ptr->ilosc_przewodnikow = 0;
+		shm_ptr->prom_blokada = 0;
 	}
 	return shm_ptr;
 }

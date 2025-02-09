@@ -7,6 +7,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
 #include "header.h"
 
 void reset_pamieci_wspoldzielonej(int);
@@ -14,8 +15,10 @@ int sygnal=0;
 
 
 int main() {
+	srand(time(NULL));
 	struct komunikat kom;
     int id_kasjer = getpid();
+	int id_przewodnik = 0;
 	int typ_trasy = 0;
 	int wiek = 0;
 	
@@ -125,6 +128,7 @@ int main() {
             if (strncmp(kom.mtext, "OK", 2) == 0) {
 				printf("[Kasjer %d] Otrzymał potwierdzenie od przewodnika dla turysty %d!\n", id_kasjer, id_turysta);
 				zaakceptowanie = 1;
+				sscanf(kom.mtext, "OK %d", &id_przewodnik);
 				break;
 			}else if (strncmp(kom.mtext, "REJECT", 6) == 0) {
 				printf("[Kasjer %d] Otrzymał odrzucenie od przewodnika dla turysty %d, szukam następnego!\n", id_kasjer, id_turysta);
@@ -147,7 +151,7 @@ int main() {
 		// Przewodnik zaakceptował turystę
 		if (zaakceptowanie) {
 			kom.mtype = id_turysta;
-			sprintf(kom.mtext, "OK %d",typ_trasy);
+			sprintf(kom.mtext, "OK %d %d",typ_trasy, id_przewodnik);
 			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		} else {
         // Nie udało się przydzielić przewodnika, wysyłamy REJECT z propozycją zmiany trasy do turysty.
