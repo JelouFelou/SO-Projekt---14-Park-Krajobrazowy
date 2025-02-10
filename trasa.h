@@ -4,10 +4,8 @@
 #include "header.h"
 #include <time.h>
 
-#define PROM_MTYPE_OFFSET 10000
-
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr);
-void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int *prom_przewodnik, SharedData *shm_ptr, int semid_przeplyniecie);
+void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int *prom_przewodnik, SharedData *shm_ptr);
 void handler_wieza_sygnal(int);
 
 int prom_liczba = 0;
@@ -160,7 +158,7 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int semid_turysta_wie
 
 
 // -------Płynięcie promem-------
-void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom, int semid_przeplyniecie, int id_przewodnik, int grupa[], int liczba_w_grupie) {
+void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int id_przewodnik, int grupa[], int liczba_w_grupie) {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
@@ -202,7 +200,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 			printf("[%d][Przewodnik %d]: Wchodzę na prom jako pierwszy (miejsc zajętych: %d)\n",typ_trasy, id_przewodnik, shm_ptr->prom_zajete + 1);
 		}
 		
-	//1. Wchodzą turyści
+	// Wchodzą turyści
 		while(prom_liczba < liczba_w_grupie){
 			if (shm_ptr->prom_zajete < X3) {
 				LiczbaTurysciTrasy(typ_trasy, shm_ptr); // Zmniejsza liczbę osób danej strony o 1
@@ -213,12 +211,12 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 					} else if (typ_trasy == 2) {
 						printf(YEL "[DEBUG] Pozostało czekających turystów z trasy %d: %d\n" RESET,typ_trasy, shm_ptr->turysci_trasa_2);
 					}
-					
+//1. Komunikat START					
 				sleep(1);
-				kom.mtype = grupa[prom_liczba];
-				sprintf(kom.mtext, "OK");
+				kom.mtype = grupa[prom_liczba] + PROM_START_OFFSET;
+				sprintf(kom.mtext, "START");
 				if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
-					perror("msgsnd failed (Prom - wchodzenie)");
+					perror("msgsnd failed (Prom - START)");
 				} else {
 					printf("[%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete + 1);
 				}
@@ -228,7 +226,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 		}
 		
 		if (shm_ptr->prom_zajete == X3 || (shm_ptr->prom_zajete > 0 && ((typ_trasy == 1 && shm_ptr->turysci_trasa_1 == 0) || (typ_trasy == 2 && shm_ptr->turysci_trasa_2 == 0)))) {
-			PrzeplywPromem(IDkolejki, typ_trasy, id_przewodnik, grupa, semid_prom, &prom_przewodnik, shm_ptr, semid_przeplyniecie);
+			PrzeplywPromem(IDkolejki, typ_trasy, id_przewodnik, grupa, semid_prom, &prom_przewodnik, shm_ptr);
 		}
 		
 	// Jeżeli nie ma turystów po żadnej ze stron
@@ -251,12 +249,12 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 	prom_liczba=0;
 	start_id=0;
 	
-	//3. Wyczekuje na gotowość wszystkich turystów
+//3. Wyczekuje na gotowość wszystkich turystów
 	for (int i = 0; i < liczba_w_grupie; i++) {
-		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_przewodnik, 0) == -1) {
+		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_przewodnik + PROM_READY_OFFSET, 0) == -1) {
             perror("msgrcv failed (Prom - waiting for DONE)");
 		} else {
-			if (strcmp(kom.mtext, "OK") == 0) {
+			if (strcmp(kom.mtext, "DONE") == 0) {
 				printf("[%d][Przewodnik %d]: Otrzymano potwierdzenie od turysty %d po przepłynięciu (%s)\n",typ_trasy, id_przewodnik, grupa[i], kom.mtext);
 			} else {
 				printf("[Przewodnik %d]: Otrzymałem nieoczekiwany komunikat: %s\n", id_przewodnik, kom.mtext);
@@ -271,7 +269,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_prom
 
 
 // --- Funkcje pomocnicze
-void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int *prom_przewodnik, SharedData *shm_ptr, int semid_przeplyniecie) {
+void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int *prom_przewodnik, SharedData *shm_ptr) {
     printf(BLU"[Prom]: Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek);
 	struct komunikat kom;
 	
@@ -291,11 +289,11 @@ void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[]
         shm_ptr->prom_zajete--; // Przewodnik opuszcza prom
     }
 	
-	//2. Wysiadają turyści
+//2. Wysiadają turyści
     for (int i = start_id; i < prom_liczba; i++) {
         shm_ptr->prom_zajete--;
 			
-		kom.mtype = grupa[i];
+		kom.mtype = grupa[i] + PROM_EXIT_OFFSET;
 		sprintf(kom.mtext, "PROM");
 		if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
             perror("msgsnd failed (Prom)");

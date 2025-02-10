@@ -32,8 +32,8 @@ int main() {
 	
 	// Jeśli turysta jest VIP-em – ustawiamy losowo trasę oraz wiek
 	if(vip){
-		int typ_trasy = (rand() % 2) + 1;
-		int wiek = (rand() % 80) + 1;
+		typ_trasy = (rand() % 2) + 1;
+		wiek = (rand() % 80) + 1;
 	}
 	// Dla zwykłego turysty dane (typ trasy i wiek) zostaną nadane przez kasjera
 	
@@ -68,13 +68,13 @@ int main() {
 	sleep(1);
 	
 	if(!vip){ // Turysta nie jest vipem
-		printf("> [Turysta %d] podchodzi do kasy\n\n",id_turysta);
+		printf("> [Turysta %d] podchodzi do kasy\n",id_turysta);
 	
 	// ---- Kasjer ----
 	
 		//1. Zgłoszenie do kolejki
-		sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
 		kom.mtype = KASJER;
+		sprintf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", id_turysta);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 
 		//2. Oczekiwanie na wezwanie do kasy
@@ -82,72 +82,34 @@ int main() {
 			perror("msgrcv failed");
 		} else {
 			printf("[Turysta %d] został wezwany do kasy\n", id_turysta);
-		}
-		
-		// Wyodrębnienie PID kasjera z komunikatu
-		char *ptr = strstr(kom.mtext, "od ");
-		if (ptr != NULL) {
-			id_kasjer = atoi(ptr + 3);
-		} else {
-			fprintf(stderr, "Nie udało się odczytać PID kasjera\n");
-			exit(1);
+			sscanf(kom.mtext, "Zapraszamy do kasy - od %d", &id_kasjer);
 		}
 	
 		//3. Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
-		kom.mtype = id_kasjer;
-		sprintf(kom.mtext, "[Turysta %d] chce kupić bilet",id_turysta);
-		printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet\n", id_turysta, id_kasjer);
+		kom.mtype = id_turysta;
+		sprintf(kom.mtext, "[Turysta %d] chce kupić bilet", id_turysta);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet\n", id_turysta, id_kasjer);
 
 		//4. Odbiór biletu
-		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1)  {
+		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
 			perror("msgrcv failed");
 		} else {
 			printf("[Turysta %d] odbiera %s\n\n", id_turysta, kom.mtext);
-			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d", &typ_trasy, &wiek);
+			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d", &typ_trasy, &wiek, &id_przewodnik);
 		}
 		
 	// ---- Przewodnik ----
-	
-		// Próba przyjęcia turysty przez przewodnika
-		if (msgrcv(IDkolejki, &kom, MAX, id_turysta, 0) == -1) {
-			perror("msgrcv final message failed");
-			exit(1);
-		} else {
-			// Turysta został przyjęty
-			if (strncmp(kom.mtext, "OK", 2) == 0) { 
-				printf("[Turysta %d] otrzymałem potwierdzenie od kasjera: %s\n\n", id_turysta, kom.mtext);
-				if (sscanf(kom.mtext, "OK %d %d", &typ_trasy, &id_przewodnik) == 1) {
-				} else {
-					printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-					exit(1);
-				}
-			}
-			// Turysta jest odrzucony, zmiana trasy
-			else if (strncmp(kom.mtext, "REJECT", 6) == 0) { 
-				if (sscanf(kom.mtext, "REJECT %d", &typ_trasy) == 1) {
-					printf("[Turysta %d] Otrzymałem propozycję zmiany trasy. Nowa trasa: %d.\n", id_turysta, typ_trasy);
-					// Następuje powtórzenie pętli – wysłanie nowego żądania z aktualnym typem trasy.
-				} else {
-					printf("[Turysta %d] Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-					exit(1);
-				}
-			} else {
-				printf("[Turysta %d] otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
-				exit(1);
-			}
-		}
-	
 		sleep(2);
-		printf("[Turysta %d] otrzymał bilet i idzie do przewodnika\n", id_turysta);
 		printf("[Turysta %d] czeka na rozpoczęcie oprowadzania...\n", id_turysta);
 		
 		// Turysta czeka aż przewodnik zacznie wycieczkę
 		kom.mtype = id_turysta;
 		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
 			perror("msgrcv failed");
+		} else {
+			printf("[Turysta %d] jest podekscytowany zwiedzaniem parku!\n", id_turysta);
 		}
-		printf("[Turysta %d] jest podekscytowany zwiedzaniem parku!\n", id_turysta);
 	
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
@@ -283,10 +245,10 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika
-	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
-        perror("msgrcv failed (Prom)");
+	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta + PROM_START_OFFSET, 0) == -1) {
+        perror("msgrcv failed (Prom -START)");
     } else {
-        if (strcmp(kom.mtext, "OK") == 0) {
+        if (strcmp(kom.mtext, "START") == 0) {
             printf("[Turysta %d]: Widzi prom\n", id_turysta);
         } else {
             printf("[Turysta %d]: Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
@@ -305,8 +267,8 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
 	
 //2. Turysta wchodzi na prom 
-	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
-        perror("msgrcv failed (Prom)");
+	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta + PROM_EXIT_OFFSET, 0) == -1) {
+        perror("msgrcv failed (Prom - PROM)");
     } else {
         if (strcmp(kom.mtext, "PROM") == 0) {
             printf("[Turysta %d]: Przeplynąłem promem na drugą stronę\n", id_turysta);
@@ -318,7 +280,7 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
 	
 //3. Powiadomienie przewodnika, że turysta jest po drugiej stronie
-    kom.mtype = id_przewodnik;
+    kom.mtype = id_przewodnik + PROM_READY_OFFSET;
     sprintf(kom.mtext, "DONE");
     if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
         perror("msgsnd failed (Prom - DONE)");

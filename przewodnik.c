@@ -17,15 +17,12 @@ void przedwczesne_wyjscie(int);
 
 int grupa[M];
 int wiek_turysty[M];
-int liczba_w_grupie = 0;
+int liczba_w_grupie=0;
 int IDkolejki;
-int semid_wyjscie, semid_wycieczka;
 int semid_most, semid_wieza, semid_prom;
-int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
-int semid_przewodnik_most, semid_przewodnik_wieza, semid_przewodnik_prom;
-int semid_przeplyniecie, semid_wieza_limit;
 int wymuszony_start=0;
-int przypisana_trasa = 0;
+int przypisana_trasa=0;
+
 
 
 int main() {
@@ -58,14 +55,11 @@ int main() {
 	int id_turysta, typ_trasy = 0, wiek, id_kasjer;
 	int wyczekuje = 1;
 	int pomylka = 0;
+	int odbiera = 1;
 	
 	// Klucze do kolejki i semaforów								 
-	key_t key_kolejka, key_semafor_wyjscie, key_semafor_wycieczka;
+	key_t key_kolejka;
 	key_t key_most, key_wieza, key_prom;
-	key_t key_turysta_most, key_turysta_wieza, key_turysta_prom;
-	key_t key_przewodnik_most, key_przewodnik_wieza, key_przewodnik_prom;
-	key_t key_przeplyniecie, key_wieza_limit;
-	
 	
 	printf(GRN "-------Symulacja parku krajobrazowego - Przewodnik %d-------\n\n" RESET,id_przewodnik);
 	
@@ -73,64 +67,6 @@ int main() {
 	key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
-        exit(1);
-    }
-	
-	// Koniec wycieczki
-	key_semafor_wyjscie = ftok(".", 100);
-    if ((semid_wyjscie = semget(key_semafor_wyjscie, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	
-	// Odpowiedzialny za informacje o rozpoczęciu wycieczki
-	key_semafor_wycieczka = ftok(".", 101);
-	if ((semid_wycieczka = semget(key_semafor_wycieczka, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	
-	// Odpowiedzialne za sterowanie turystą podczas pobytu na moście, wieży i promie
-	key_turysta_most = ftok(".", 102);
-	if ((semid_turysta_most = semget(key_turysta_most, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_turysta_wieza = ftok(".", 103);
-	if ((semid_turysta_wieza = semget(key_turysta_wieza, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_turysta_prom = ftok(".", 104);
-	if ((semid_turysta_prom = semget(key_turysta_prom, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	
-	// Odpowiedzialne za sterowanie przewodnikiem podczas pobytu na moście, wieży i promie
-	key_przewodnik_most = ftok(".", 105);
-	if ((semid_przewodnik_most = semget(key_przewodnik_most, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_przewodnik_wieza = ftok(".", 106);
-	if ((semid_przewodnik_wieza = semget(key_przewodnik_wieza, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_przewodnik_prom = ftok(".", 107);
-	if ((semid_przewodnik_prom = semget(key_przewodnik_prom, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_przeplyniecie = ftok(".", 108);
-	if ((semid_przeplyniecie = semget(key_przeplyniecie, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
-        exit(1);
-    }
-	key_wieza_limit = ftok(".", 109);
-	if ((semid_wieza_limit = semget(key_wieza_limit, 1, IPC_CREAT | 0600)) == -1) {
-        perror("semget() błąd");
         exit(1);
     }
 	
@@ -154,21 +90,10 @@ int main() {
 	
 	// Inicjalizacja semaforów
 	union semun arg;					
-    arg.val = 0;
-		semctl(semid_wyjscie, 0, SETVAL, arg);
-		semctl(semid_wycieczka, 0, SETVAL, arg);
-		semctl(semid_turysta_most, 0, SETVAL, arg);
-		semctl(semid_turysta_wieza, 0, SETVAL, arg);
-		semctl(semid_turysta_prom, 0, SETVAL, arg);
-		semctl(semid_przewodnik_most, 0, SETVAL, arg);
-		semctl(semid_przewodnik_wieza, 0, SETVAL, arg);
-		semctl(semid_przewodnik_prom, 0, SETVAL, arg);
 	arg.val = N;
 		semctl(semid_most, 0, SETVAL, arg);
 		semctl(semid_wieza, 0, SETVAL, arg);
 		semctl(semid_prom, 0, SETVAL, arg);
-	arg.val = X2;
-		semctl(semid_wieza_limit, 0, SETVAL, arg);
 		
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
@@ -183,49 +108,9 @@ int main() {
 			printf(YEL "[Przewodnik %d] wyczekuje turystów\n" RESET, id_przewodnik);
 			wyczekuje=0;
 		}
-			
-        if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, 0) == -1) {
-			if (wymuszony_start){
-				printf(YEL"\n[Przewodnik %d]: Dostałem sygnał wymuszonego startu wycieczki\n"RESET, id_przewodnik);
-			}else{
-				perror("msgrcv failed");
-				continue;
-			}
-        }else{
-		// Odczytujemy informacje o turyście
-        sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
-		
-		// Sprawdzamy czy turysta o tym PID nadal istnieje
-		if (!czy_istnieje(id_kasjer)) continue;
-		if (!czy_istnieje(id_turysta)) continue;
-		
-		//Sprawdzamy przypisaną trasę
-		if (liczba_w_grupie == 0) {
-            // Pierwszy turysta – przypisujemy przewodnikowi dany typ
-            przypisana_trasa = typ_trasy;
-            printf("[Przewodnik %d]: Ustawiam typ trasy na %d\n", id_przewodnik, przypisana_trasa);
-        } else {
-            // Kolejne zgłoszenia – sprawdzamy zgodność typu trasy
-            if (typ_trasy != przypisana_trasa) {
-                printf(RED "[%d][Przewodnik %d]: Odrzucam turystę %d, typ trasy %d nie pasuje do mojej trasy %d\n" RESET,przypisana_trasa,id_przewodnik, id_turysta, typ_trasy, przypisana_trasa);
-                kom.mtype = id_kasjer;
-                strcpy(kom.mtext, "REJECT");
-                msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-                continue; // Pomijamy tego turystę – może spróbuje dołączyć do innego przewodnika
-            }
-        }
 
-		kom.mtype = id_kasjer;
-		sprintf(kom.mtext, "OK %d", id_turysta);
-		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-
-        grupa[liczba_w_grupie] = id_turysta;
-        wiek_turysty[liczba_w_grupie] = wiek;
-        liczba_w_grupie++;
-		printf(BLU"[%d][Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET,przypisana_trasa, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
-		}
-		
-        if (liczba_w_grupie == M || wymuszony_start == 1) {
+		// Wycieczka
+		if (liczba_w_grupie == M || wymuszony_start == 1) {
 			sleep(2);
 			wymuszony_start=0;
             printf(GRN"\n[%d][Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET,przypisana_trasa, id_przewodnik, liczba_w_grupie, typ_trasy);
@@ -236,7 +121,8 @@ int main() {
 				sprintf(kom.mtext, "OK");
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 			}
-			// Inna trasa zależna od typ_trasy
+			
+			// Start wycieczki zależny od przypisana_trasa
 			switch(przypisana_trasa) {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
@@ -245,14 +131,14 @@ int main() {
 				sleep(1);
 				//TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, typ_trasy, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			case 2:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, semid_turysta_prom, semid_przeplyniecie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, typ_trasy, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				//TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
@@ -286,6 +172,68 @@ int main() {
 			wyczekuje = 1;
 			printf("\n");
         }
+		
+		//5. Przyjmowanie turystów
+        if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, 0) == -1) {
+			if (wymuszony_start){
+				printf(YEL"\n[Przewodnik %d]: Dostałem sygnał wymuszonego startu wycieczki\n"RESET, id_przewodnik);
+			}else{
+				perror("msgrcv failed");
+				continue;
+			}
+        } else {
+			// Odczytujemy informacje o turyście
+			sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
+			if(odbiera){
+				printf("[Przewodnik %d]: Odbiera informacje od kasjera o turyście (%d %d %d %d)\n", id_przewodnik, id_turysta, typ_trasy, wiek, id_kasjer);
+				odbiera=0;
+			}
+			
+			// Sprawdzamy czy turysta o tym PID nadal istnieje
+			if (!czy_istnieje(id_kasjer)) continue;
+			if (!czy_istnieje(id_turysta)) continue;
+		
+			//6. Sprawdzamy przypisaną trasę
+			if (liczba_w_grupie == 0) {
+				// Pierwszy turysta – przypisujemy przewodnikowi dany typ
+				przypisana_trasa = typ_trasy;
+				printf("[Przewodnik %d]: Ustawiam typ trasy na %d\n", id_przewodnik, przypisana_trasa);
+			}
+			
+			// Kolejne zgłoszenia – sprawdzamy zgodność typu trasy
+			if (typ_trasy != przypisana_trasa) {
+				printf(RED "[%d][Przewodnik %d]: Odrzucam turystę %d, typ trasy %d nie pasuje do mojej trasy %d\n" RESET,przypisana_trasa,id_przewodnik, id_turysta, typ_trasy, przypisana_trasa);
+				kom.mtype = id_kasjer;
+				strcpy(kom.mtext, "NO");
+				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+				continue;
+			} else if (typ_trasy == przypisana_trasa) {
+				kom.mtype = id_kasjer;
+				sprintf(kom.mtext, "OK %d", id_przewodnik);
+				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+					
+				
+				int już_jest = 0;
+				for (int i = 0; i < liczba_w_grupie; i++) {
+					if (grupa[i] == id_turysta) {
+					już_jest = 1;
+					break;
+					}
+				}
+				
+				if (już_jest) {
+					// Możesz opcjonalnie wypisać komunikat i pominąć ten komunikat
+					printf("[Przewodnik %d]: Turysta %d już został dodany do grupy. Pomijam duplikat.\n", id_przewodnik, id_turysta);
+					continue;
+				}
+				
+				odbiera = 1;
+				grupa[liczba_w_grupie] = id_turysta;
+				wiek_turysty[liczba_w_grupie] = wiek;
+				liczba_w_grupie++;
+				printf(BLU"[%d][Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET,przypisana_trasa, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
+			}
+		} 
     }
 	return 0;
 }

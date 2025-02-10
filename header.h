@@ -22,7 +22,16 @@
 #define KASJER 1  // typ komunikatu do kasjera
 #define PRZEWODNIK 2 // typ komunikatu do przewodnika
 
+// Przesunięcia komunikatów
+#define MOST_START_OFFSET 11000
+#define MOST_READY_OFFSET 12000
+#define WIEZA_START_OFFSET 21000
+#define WIEZA_READY_OFFSET 22000
+#define PROM_START_OFFSET 31000
+#define PROM_EXIT_OFFSET 32000
+#define PROM_READY_OFFSET 33000
 
+// Kolory
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
 #define YEL   "\x1B[33m"
