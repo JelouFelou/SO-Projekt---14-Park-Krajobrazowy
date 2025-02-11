@@ -241,7 +241,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 
 void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+    SharedData *shm_ptr = shm_get(&shm_id);
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika
@@ -265,7 +265,6 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	}
 	sleep(2);
 	printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
-	
 //2. Turysta wchodzi na prom 
 	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta + PROM_EXIT_OFFSET, 0) == -1) {
         perror("msgrcv failed (Prom - PROM)");
@@ -278,7 +277,6 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
     }
 	sleep(2);
 	printf("[Turysta %d]: Czekam na resztę mojej grupy wraz z przewodnikiem\n", id_turysta);
-	
 //3. Powiadomienie przewodnika, że turysta jest po drugiej stronie
     kom.mtype = id_przewodnik + PROM_READY_OFFSET;
     sprintf(kom.mtext, "DONE");

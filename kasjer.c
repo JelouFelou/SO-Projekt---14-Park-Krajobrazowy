@@ -158,7 +158,7 @@ void reset_pamieci_wspoldzielonej(int sig){
     shm_ptr->prom_kierunek = 0;
     shm_ptr->prom_zajete = 0;
 	shm_ptr->czekajacy_przewodnicy_most = 0;
-    shm_ptr->czekajacy_przewodnicy_prom = 0;
+    shm_ptr->czekajace_grupy_prom = 0;
     shm_ptr->przewodnicy_most = 0;
     shm_ptr->turysci_trasa_1 = 0;
 	shm_ptr->turysci_trasa_2 = 0;

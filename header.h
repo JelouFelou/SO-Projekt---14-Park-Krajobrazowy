@@ -85,7 +85,7 @@ typedef struct {
 	int prom_kierunek;
 	int prom_zajete;
 	int czekajacy_przewodnicy_most;
-	int czekajacy_przewodnicy_prom;
+	int czekajace_grupy_prom;
 	int przewodnicy_most;
 	int turysci_trasa_1;
 	int turysci_trasa_2;
@@ -123,7 +123,7 @@ SharedData* shm_init(int* shm_id){
         shm_ptr->prom_kierunek = 0;
         shm_ptr->prom_zajete = 0;
         shm_ptr->czekajacy_przewodnicy_most = 0;
-        shm_ptr->czekajacy_przewodnicy_prom = 0;
+        shm_ptr->czekajace_grupy_prom = 0;
         shm_ptr->przewodnicy_most = 0;
         shm_ptr->turysci_trasa_1 = 0;
         shm_ptr->turysci_trasa_2 = 0;
@@ -132,6 +132,27 @@ SharedData* shm_init(int* shm_id){
         shm_ptr->ilosc_przewodnikow = 0;
 		shm_ptr->prom_blokada = 0;
 	}
+	return shm_ptr;
+}
+
+SharedData* shm_get(int* shm_id){
+	// Tworzymy segment pamięci współdzielonej
+    key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
+	int init;
+	
+    *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
+    if (*shm_id == -1) {
+        perror("shmget");
+        exit(1);
+    }else{
+		init = 1;
+	}
+
+    SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
+    if (shm_ptr == (void *)-1) {
+        perror("shmat");
+        exit(1);
+    }	
 	return shm_ptr;
 }
 

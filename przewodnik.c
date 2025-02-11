@@ -90,7 +90,7 @@ int main() {
 	
 	// Inicjalizacja semaforów
 	union semun arg;					
-	arg.val = N;
+	arg.val = 0;
 		semctl(semid_most, 0, SETVAL, arg);
 		semctl(semid_wieza, 0, SETVAL, arg);
 		semctl(semid_prom, 0, SETVAL, arg);
