@@ -107,7 +107,7 @@ int main() {
 		semctl(semid_wieza, 0, SETVAL, arg);
 		semctl(semid_prom, 0, SETVAL, arg);
 		semctl(semid_czekajaca_grupa, 0, SETVAL, arg);
-	//arg.val = 1;
+	arg.val = 1;
 		semctl(semid_turysta_wchodzenie, 0, SETVAL, arg);
 		
 	
@@ -124,7 +124,7 @@ int main() {
 			wyczekuje=0;
 		}
 
-		// Wycieczka
+// --- Wycieczka
 		if (liczba_w_grupie == M || wymuszony_start == 1) {
 			sleep(2);
 			wymuszony_start=0;
@@ -188,6 +188,7 @@ int main() {
 			printf("\n");
         }
 		
+// --- Przyjmowanie turysty do grupy		
 		//5. Przyjmowanie turystów
         if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, 0) == -1) {
 			if (wymuszony_start){

@@ -15,7 +15,7 @@ int sygnal=0;
 
 
 int main() {
-	srand(time(NULL));
+	srand((unsigned)time(NULL) ^ (getpid() << 16));
 	struct komunikat kom;
     int id_kasjer = getpid();
 	int id_przewodnik = 0;
@@ -61,7 +61,7 @@ int main() {
 		} else {
 			sscanf(kom.mtext, "[Turysta %d] zgłasza się do kolejki", &id_turysta);
 			if (!czy_istnieje(id_turysta)) continue;
-			printf("[Kasjer %d] Zaprasza następnego turystę do kasy\n", id_kasjer);
+			printf("[Kasjer %d] Zaprasza następnego turystę %d do kasy\n", id_kasjer, id_turysta);
 		}
 
 		//2. Wywołanie turysty do kasy – wyciągamy PID turysty z komunikatu
@@ -75,7 +75,7 @@ int main() {
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		
 		//3. Odbiór komunikatu od turysty – tym razem turysta wysyła wiadomość na mtype równy PID kasjera
-        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
+        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_kasjer, 0) == -1) {
 			perror("msgrcv failed");
 		} else {
 			printf("[Kasjer %d] Przyjmuje zamówienie od turysty %d\n", id_kasjer, id_turysta);
@@ -103,7 +103,8 @@ int main() {
 				if (strncmp(kom.mtext, "OK", 2) == 0) {
 					printf("[Kasjer %d] Otrzymał potwierdzenie od przewodnika dla turysty %d!\n", id_kasjer, id_turysta);
 					sscanf(kom.mtext, "OK %d", &id_przewodnik);
-			
+					
+				//4. Przekazanie biletu
 					kom.mtype = id_turysta;
 					sprintf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d", typ_trasy, wiek, id_przewodnik);
 					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);

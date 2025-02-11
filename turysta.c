@@ -86,7 +86,7 @@ int main() {
 		}
 	
 		//3. Komunikat do kasjera – wysyłamy dalej już na dedykowany kanał
-		kom.mtype = id_turysta;
+		kom.mtype = id_kasjer;
 		sprintf(kom.mtext, "[Turysta %d] chce kupić bilet", id_turysta);
 		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 		printf("[Turysta %d] przekazuje kasjerowi %d, że chce kupić bilet\n", id_turysta, id_kasjer);
