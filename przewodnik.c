@@ -19,7 +19,7 @@ int grupa[M];
 int wiek_turysty[M];
 int liczba_w_grupie=0;
 int IDkolejki;
-int semid_most, semid_wieza, semid_prom;
+int semid_most, semid_wieza, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa;
 int wymuszony_start=0;
 int przypisana_trasa=0;
 
@@ -86,6 +86,18 @@ int main() {
 		perror("Błąd przy tworzeniu semafora promu");
 		exit(1);
 	}
+	key_t key_turysta_wchodzenie = ftok(".", 203);
+	if ((semid_turysta_wchodzenie = semget(key_turysta_wchodzenie, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora turysta_wchodzenie");
+		exit(1);
+	}
+	key_t key_czekajaca_grupa = ftok(".", 204);
+	if ((semid_czekajaca_grupa = semget(key_czekajaca_grupa, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora turysta_wchodzenie");
+		exit(1);
+	}
+	
+	
 	
 	
 	// Inicjalizacja semaforów
@@ -94,6 +106,9 @@ int main() {
 		semctl(semid_most, 0, SETVAL, arg);
 		semctl(semid_wieza, 0, SETVAL, arg);
 		semctl(semid_prom, 0, SETVAL, arg);
+		semctl(semid_czekajaca_grupa, 0, SETVAL, arg);
+	//arg.val = 1;
+		semctl(semid_turysta_wchodzenie, 0, SETVAL, arg);
 		
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
@@ -127,22 +142,22 @@ int main() {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			case 2:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				TrasaC(IDkolejki, typ_trasy, semid_prom, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, typ_trasy, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				//TrasaA(IDkolejki, typ_trasy, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_turysta_most, semid_przewodnik_most, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
