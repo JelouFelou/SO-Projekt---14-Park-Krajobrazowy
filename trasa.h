@@ -213,27 +213,26 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 	// Pierwsze wchodzi przewodnik a po nim wchodzą turyści
 		while(prom_liczba < liczba_w_grupie && shm_ptr->prom_zajete < X3 && shm_ptr->prom_odplynal==0 && shm_ptr->prom_kierunek == typ_trasy){
 		// Blokuje dostęp do wchodzenia wszystkim
-			if(shm_ptr->turysta_blokada==1){
-				//shm_ptr->turysta_wchodzenie++;
-				semafor_operacja(semid_turysta_wchodzenie, -1); // Blokujemy dostęp do dalszej części programu dla 1 grupy
-				continue;
+			//shm_ptr->turysta_wchodzenie++;
+			semafor_operacja(semid_turysta_wchodzenie, -1); // Blokujemy dostęp do dalszej części programu dla reszty
+
+			//shm_ptr->turysta_blokada=1;
+			if (shm_ptr->prom_odplynal==1){
+				printf("[%d][Przewodnik %d]: Prom już odpłynął\n",typ_trasy, id_przewodnik);
+				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
+				break;
 			}
-			shm_ptr->turysta_blokada=1;
+			if (shm_ptr->prom_zajete == X3){
+				printf("[%d][Przewodnik %d]: Prom jest już zapełniony\n",typ_trasy, id_przewodnik);
+				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
+				break;
+			}
 			
 		// Przewodnik	
 			if(prom_przewodnik == 0 && shm_ptr->prom_zajete < X3 && shm_ptr->prom_odplynal==0 && shm_ptr->prom_kierunek == typ_trasy){
 				shm_ptr->prom_zajete++;
 				prom_przewodnik=1;
 				printf("[%d][Przewodnik %d]: Wchodzę na prom jako pierwszy (miejsc zajętych: %d/%d)\n",typ_trasy, id_przewodnik, shm_ptr->prom_zajete, X3);
-			} else if (shm_ptr->prom_odplynal==1){
-				printf("[%d][Przewodnik %d]: Prom już odpłynął\n",typ_trasy, id_przewodnik);
-				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
-				break;
-			}
-			else if (shm_ptr->prom_zajete == X3){
-				printf("[%d][Przewodnik %d]: Prom jest już zapełniony\n",typ_trasy, id_przewodnik);
-				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
-				break;
 			}
 			
 		// Turyści		
@@ -247,20 +246,9 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 				LiczbaTurysciTrasy(typ_trasy, shm_ptr); // Zmniejsza liczbę osób danej strony o 1
 				printf("[%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d/%d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3);
 				prom_liczba++;
-				shm_ptr->turysta_blokada=0;
+				//shm_ptr->turysta_blokada=0;
 				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
-			} else if (shm_ptr->prom_odplynal==1){
-				printf("[%d][Przewodnik %d]: Prom już odpłynął\n",typ_trasy, id_przewodnik);
-				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
-				break;
-			}
-			else if (shm_ptr->prom_zajete == X3){
-				printf("[%d][Przewodnik %d]: Prom jest już zapełniony\n",typ_trasy, id_przewodnik);
-				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
-				break;
-			}
-			
-			info=0;
+			} 
 			
 		// Warunkowe wyjścia z pętli
 			if((prom_liczba == liczba_w_grupie) && ((typ_trasy == 1 && shm_ptr->turysci_trasa_1 == 0) || (typ_trasy == 2 && shm_ptr->turysci_trasa_2 == 0))){
@@ -269,14 +257,14 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 			}
 			else if (prom_liczba == liczba_w_grupie){
 				printf("[Prom]: Wszystkie osoby z grupy przewodnika %d weszły na prom\n",id_przewodnik);
+				printf("[Prom]: Grupa jest z trasy %d, na trasie 1 znajduje się: %d, na trasie 2 znajduje się: %d\n",typ_trasy,shm_ptr->turysci_trasa_1,shm_ptr->turysci_trasa_2); 
 				shm_ptr->czekajaca_grupa++;
 				semafor_operacja(semid_czekajaca_grupa, -1);
 				PrzeplywPromem(IDkolejki, typ_trasy, id_przewodnik, grupa, semid_prom, prom_przewodnik, start_id, prom_liczba, shm_ptr);
 				shm_ptr->prom_zajete = 0;
 				start_id = prom_liczba; // Przypisujemy prom_liczba do start_id aby następne wykonanie funkcji zaczęło się od turysty który jeszcze nie wysiadł
-				if(prom_liczba == liczba_w_grupie){
-					break;
-				}
+				semafor_operacja(semid_turysta_wchodzenie, 1);
+				break;
 			}
 		}
 // --- Odpływ Promu
