@@ -24,11 +24,15 @@ int main() {
 	int typ_trasy = 0;
 	int wiek = 0;
 	
+	
 	while(1){
 		if (!czy_istnieje(id_kasjer)) continue;
 		else if (!czy_istnieje(id_turysta)) continue;
 		else break;
 	}
+	// Inicjalizacja pamięci współdzielonej
+	int shm_id;
+    SharedData *shm_ptr = shm_get(&shm_id);
 	
 	// Jeśli turysta jest VIP-em – ustawiamy losowo trasę oraz wiek
 	if(vip){
@@ -39,11 +43,7 @@ int main() {
 	
     key_t key_kolejka;
 	int IDkolejki;
-	
-	// Inicjalizacja pamięci współdzielonej
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
-	
+
 	if(shm_ptr->liczba_turystow==N){
 		printf("Osiągnięto już limit turystów danego dnia\n");
 		exit(1);
@@ -114,14 +114,14 @@ int main() {
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
 			case(1):
-				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
 				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
+				//TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 			case(2):
-				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
+				//TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
 				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 		}
 		
@@ -156,7 +156,7 @@ void przedwczesne_wyjscie(int sig_n){
 
 void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+    SharedData *shm_ptr = shm_get(&shm_id);
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika
@@ -190,7 +190,7 @@ void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 
 void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+    SharedData *shm_ptr = shm_get(&shm_id);
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika

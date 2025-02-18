@@ -132,7 +132,6 @@ int main() {
 				}
 			}
 		}
-		
 		proba = 0;
 		zaakceptowanie = 0;
 		wyczekuje = 1;
@@ -149,7 +148,7 @@ int main() {
 
 void reset_pamieci_wspoldzielonej(int sig){
 	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+    SharedData *shm_ptr = shm_get(&shm_id);
 	
 	sygnal=1;
 	shm_ptr->liczba_osob_na_moscie = 0;

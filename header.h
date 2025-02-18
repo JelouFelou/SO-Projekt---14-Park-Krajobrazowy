@@ -90,6 +90,7 @@ typedef struct {
 	int turysci_trasa_1;
 	int turysci_trasa_2;
 	int liczba_turystow;
+	int turysci_w_grupie;
 	int wieza_sygnal;
 	int ilosc_przewodnikow;	
 	int prom_blokada;
@@ -132,6 +133,7 @@ SharedData* shm_init(int* shm_id){
         shm_ptr->turysci_trasa_1 = 0;
         shm_ptr->turysci_trasa_2 = 0;
         shm_ptr->liczba_turystow = 0;
+		shm_ptr->turysci_w_grupie = 0;
         shm_ptr->wieza_sygnal = 0;
         shm_ptr->ilosc_przewodnikow = 0;
 		shm_ptr->prom_blokada = 0;
