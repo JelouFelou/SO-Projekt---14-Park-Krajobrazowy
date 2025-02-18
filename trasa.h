@@ -108,7 +108,7 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 
 
 // -------Wieża Widokowa-------
-void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int semid_turysta_wieza, int semid_przewodnik_wieza, int semid_wieza_limit, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie) {
+void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie) {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_get(&shm_id);

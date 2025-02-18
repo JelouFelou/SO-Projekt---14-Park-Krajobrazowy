@@ -130,7 +130,7 @@ int main() {
 		}
 
 // --- Wycieczka
-		if (liczba_w_grupie == M || wymuszony_start == 1 || shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie) {
+		if (liczba_w_grupie == M || wymuszony_start == 1 || (shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie && start_max==0)) {
 			sleep(2);
 			wymuszony_start=0;
             printf(GRN"\n[%d][Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET,przypisana_trasa, id_przewodnik, liczba_w_grupie, typ_trasy);
@@ -147,9 +147,9 @@ int main() {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
 				//TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
@@ -160,9 +160,9 @@ int main() {
 				sleep(1);
 				//TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, semid_turysta_wieza, semid_przewodnik_wieza, semid_wieza_limit, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
+				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
@@ -195,14 +195,20 @@ int main() {
 		
 // --- Przyjmowanie turysty do grupy		
 		//5. Przyjmowanie turystów
-        if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, 0) == -1) {
-			if (wymuszony_start){
+        if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, IPC_NOWAIT) == -1) {
+			if (errno==ENOMSG && shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie && shm_ptr->start_max==0) {
+				printf(YEL"\n[Przewodnik %d]: To już ostatni turyści w parku\n"RESET, id_przewodnik);
+				continue;
+			}else if(errno==ENOMSG){
+				// Brak wiadomości
+				continue;
+			}else if (wymuszony_start){
 				printf(YEL"\n[Przewodnik %d]: Dostałem sygnał wymuszonego startu wycieczki\n"RESET, id_przewodnik);
 			}else{
 				perror("msgrcv failed");
 				continue;
-			}
-        } else {
+			} 
+		} else {
 			// Odczytujemy informacje o turyście
 			sscanf(kom.mtext, "%d %d %d %d", &id_turysta, &typ_trasy, &wiek, &id_kasjer);
 			if(odbiera){
@@ -254,8 +260,9 @@ int main() {
 				liczba_w_grupie++;
 				printf(BLU"[%d][Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET,przypisana_trasa, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
 				shm_ptr->turysci_w_grupie++;
+				printf("%d/%d\n",shm_ptr->turysci_w_grupie,shm_ptr->liczba_turystow);
 			}
-		} 
+		}
     }
 	return 0;
 }

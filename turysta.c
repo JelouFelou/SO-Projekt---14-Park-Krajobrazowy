@@ -49,6 +49,7 @@ int main() {
 		exit(1);
 	}else{
 		shm_ptr->liczba_turystow++;
+		shm_ptr->start_max=0;
 	}
 	
 	signal(SIGTERM,przedwczesne_wyjscie);
@@ -114,14 +115,14 @@ int main() {
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
 			case(1):
-				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
+				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
 				//TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 			case(2):
 				//TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
+				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 		}
 		
