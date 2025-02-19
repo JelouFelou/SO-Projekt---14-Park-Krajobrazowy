@@ -98,7 +98,6 @@ typedef struct {
 	int turysta_wchodzenie;
 	int czekajaca_grupa;
 	int prom_odplynal;
-	int start_max;
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej
@@ -142,7 +141,6 @@ SharedData* shm_init(int* shm_id){
 		shm_ptr->turysta_wchodzenie = 0;
 		shm_ptr->czekajaca_grupa = 0;
 		shm_ptr->prom_odplynal = 0;
-		shm_ptr->start_max = 0;
 	}
 	return shm_ptr;
 }

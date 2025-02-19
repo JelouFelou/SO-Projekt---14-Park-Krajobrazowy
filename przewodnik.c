@@ -128,9 +128,9 @@ int main() {
 			printf(YEL "[Przewodnik %d] wyczekuje turystów\n" RESET, id_przewodnik);
 			wyczekuje=0;
 		}
-
+		
 // --- Wycieczka
-		if (liczba_w_grupie == M || wymuszony_start == 1 || (shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie && start_max==0)) {
+		if (liczba_w_grupie == M || wymuszony_start == 1 || (shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie && shm_ptr->turysci_w_grupie!=0 && przypisana_trasa!=0)) {
 			sleep(2);
 			wymuszony_start=0;
             printf(GRN"\n[%d][Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET,przypisana_trasa, id_przewodnik, liczba_w_grupie, typ_trasy);
@@ -186,7 +186,6 @@ int main() {
 				sleep(1);
 				pomylka=0;
 			}
-			
 			liczba_w_grupie = 0;
 			przypisana_trasa = 0;
 			wyczekuje = 1;
@@ -196,8 +195,8 @@ int main() {
 // --- Przyjmowanie turysty do grupy		
 		//5. Przyjmowanie turystów
         if (msgrcv(IDkolejki, &kom, MAX, PRZEWODNIK, IPC_NOWAIT) == -1) {
-			if (errno==ENOMSG && shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie && shm_ptr->start_max==0) {
-				printf(YEL"\n[Przewodnik %d]: To już ostatni turyści w parku\n"RESET, id_przewodnik);
+			if (errno==ENOMSG && shm_ptr->liczba_turystow==shm_ptr->turysci_w_grupie) {
+				//printf(YEL"\n[Przewodnik %d]: To już ostatni turyści w parku\n"RESET, id_przewodnik);
 				continue;
 			}else if(errno==ENOMSG){
 				// Brak wiadomości
@@ -238,21 +237,6 @@ int main() {
 				kom.mtype = id_kasjer;
 				sprintf(kom.mtext, "OK %d", id_przewodnik);
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-					
-			/*		
-				int już_jest = 0;
-				for (int i = 0; i < liczba_w_grupie; i++) {
-					if (grupa[i] == id_turysta) {
-					już_jest = 1;
-					break;
-					}
-				}
-				if (już_jest) {
-					// Możesz opcjonalnie wypisać komunikat i pominąć ten komunikat
-					printf("[Przewodnik %d]: Turysta %d już został dodany do grupy. Pomijam duplikat.\n", id_przewodnik, id_turysta);
-					continue;
-				}
-			*/	
 				
 				odbiera = 1;
 				grupa[liczba_w_grupie] = id_turysta;

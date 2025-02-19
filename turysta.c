@@ -49,7 +49,6 @@ int main() {
 		exit(1);
 	}else{
 		shm_ptr->liczba_turystow++;
-		shm_ptr->start_max=0;
 	}
 	
 	signal(SIGTERM,przedwczesne_wyjscie);
