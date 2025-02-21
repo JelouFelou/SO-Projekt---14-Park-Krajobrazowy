@@ -95,6 +95,7 @@ typedef struct {
 	int turysta_wchodzenie;
 	int czekajaca_grupa;
 	int prom_odplynal;
+	int prom_istnieje;
 } SharedData;
 
 // Inicjalizacja Pamięci Współdzielonej
