@@ -14,6 +14,7 @@
 void awaryjne_wyjscie(int);
 void rozpoczecie_wycieczki(int);
 void przedwczesne_wyjscie(int);
+void wyjscie_prom(int);
 
 int grupa[M];
 int wiek_turysty[M];
@@ -60,7 +61,10 @@ int main() {
 	key_t key_kolejka;
 	key_t key_most, key_wieza, key_prom;
 	
-	//printf(GRN "-------Symulacja parku krajobrazowego - Przewodnik %d-------\n\n" RESET,id_przewodnik);
+	if(shm_ptr->przewodnik_istnieje==0){
+		shm_ptr->przewodnik_istnieje=1;
+		printf(GRN "-------Symulacja parku krajobrazowego - Przewodnik-------\n\n" RESET);
+	}
 	
 	// Pobieranie ID kolejki komunikatów
 	key_kolejka = ftok(".", 99);
@@ -120,12 +124,13 @@ int main() {
 	signal(SIGINT,awaryjne_wyjscie); 
 	signal(SIGUSR1,rozpoczecie_wycieczki);
 	signal(SIGTERM,przedwczesne_wyjscie);
+	signal(SIGUSR2,wyjscie_prom);
 
 
 // ---- Pętla przewodnika ----
     while (1) {
 		if(wyczekuje){ // Wyświetli tylko raz | wyczekuje turystę zamiast za każdym razem jak turysta dołączy
-			printf(YEL "[Przewodnik %d] wyczekuje turystów\n" RESET, id_przewodnik);
+			printf(YEL "[Przewodnik %d]: wyczekuje turystów\n" RESET, id_przewodnik);
 			wyczekuje=0;
 		}
 		
@@ -147,9 +152,9 @@ int main() {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(1);
-				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
@@ -160,9 +165,9 @@ int main() {
 				sleep(1);
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
-				//TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
 				sleep(1);
-				//TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
+				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
 				sleep(1);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
@@ -181,7 +186,7 @@ int main() {
 				for (int i = 0; i < M; i++) {
 					grupa[i] = 0; // Upewnij się, że grupa jest początkowo pusta
 				}
-				printf("[Przewodnik %d]:Wszyscy turyści bezpiecznie dotarli do kasy.\n",id_przewodnik);
+				printf("[Przewodnik %d]: Wszyscy turyści bezpiecznie dotarli do kasy.\n",id_przewodnik);
 			} else { // W wypadku gdy było zero turystów, wykonuje się ta część
 				sleep(1);
 				pomylka=0;
@@ -244,7 +249,7 @@ int main() {
 				liczba_w_grupie++;
 				printf(BLU"[%d][Przewodnik %d]>>>[Turysta %d](wiek %d) dołącza do trasy %d (%d/%d)\n"RESET,przypisana_trasa, id_przewodnik, id_turysta, wiek, typ_trasy, liczba_w_grupie, M);
 				shm_ptr->turysci_w_grupie++;
-				printf("%d/%d\n",shm_ptr->turysci_w_grupie,shm_ptr->liczba_turystow);
+				//printf("%d/%d\n",shm_ptr->turysci_w_grupie,shm_ptr->liczba_turystow);
 			}
 		}
     }
@@ -276,21 +281,9 @@ void awaryjne_wyjscie(int sig_n) {
 	// Zwolnienie miejsc w semaforach dla turystów, aby uniknąć blokady
     for (int i = 0; i < liczba_w_grupie; i++) {
         semafor_operacja(semid_most, 1); // Zwolnienie mostu
-        //semafor_operacja(semid_wieza, 1); // Zwolnienie wieży
+        semafor_operacja(semid_wieza, 1); // Zwolnienie wieży
         semafor_operacja(semid_prom, 1); // Zwolnienie promu
     }
-	/*
-    // Zwolnienie semaforów
-    semafor_operacja(semid_turysta_most, liczba_w_grupie);
-    semafor_operacja(semid_turysta_wieza, liczba_w_grupie);
-	semafor_operacja(semid_turysta_prom, liczba_w_grupie);
-	semafor_operacja(semid_przewodnik_most, liczba_w_grupie);
-	semafor_operacja(semid_przewodnik_wieza, liczba_w_grupie);
-	semafor_operacja(semid_przewodnik_prom, liczba_w_grupie);
-    semafor_operacja(semid_wycieczka, liczba_w_grupie);
-    semafor_operacja(semid_wyjscie, liczba_w_grupie);
-	semafor_operacja(semid_przeplyniecie, liczba_w_grupie);
-	*/
 
     // Przywracamy stan początkowy grupy
     liczba_w_grupie = 0;  // Grupa została opróżniona
@@ -307,7 +300,8 @@ void rozpoczecie_wycieczki(int sig_n){
 }
 
 void przedwczesne_wyjscie(int sig_n){
-	printf("[Przewodnik] przedwcześnie opuszcza park\n");
+	int id_przewodnik = getpid();
+	printf("[Przewodnik %d]: przedwcześnie opuszcza park\n", id_przewodnik);
 	int shm_id;
     SharedData *shm_ptr = shm_get(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
@@ -316,4 +310,9 @@ void przedwczesne_wyjscie(int sig_n){
 	}
 	shmdt(shm_ptr);
     exit(1);
+}
+
+void wyjscie_prom(int sig_n){
+	int id_przewodnik = getpid();
+	printf("[Przewodnik %d]: Przeplynąłem promem na drugą stronę\n", id_przewodnik);
 }

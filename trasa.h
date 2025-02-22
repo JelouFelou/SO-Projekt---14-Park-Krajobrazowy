@@ -22,7 +22,7 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 	int i = 0;
 	int most_przewodnik=0;
 	
-	printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
+	//printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
     printf("[%d][Przewodnik %d]: Sprawdzam most wiszący...\n",typ_trasy, id_przewodnik);
 	
 // --- Sprawdzanie dostępności wieży
@@ -117,7 +117,7 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 	int i = 0;
 	signal(SIGUSR2, handler_wieza_sygnal);
 	
-	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
+	//printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[%d][Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n",typ_trasy, id_przewodnik);
 	
 // --- Wchodzenie turystów na wieżę jedną klatką schodową i schodzenie drugą
@@ -192,26 +192,26 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 // --- Pętla wykonuje się puki wszyscy nie przepłynęli
 
 	while(prom_liczba < liczba_w_grupie) {
-		if(info==0){
+		/*if(info==0){
 			printf("Przed while: %d < %d, prom_zajete: %d, prom_odplynal: %d, kierunki: (%d %d); [%d]\n",prom_liczba,liczba_w_grupie,shm_ptr->prom_zajete,shm_ptr->prom_odplynal,shm_ptr->prom_kierunek,typ_trasy, id_przewodnik);
 			info=1;
-		}
+		}*/
 	
 // --- Zapełnianie promu	
 	// Pierwsze wchodzi przewodnik a po nim wchodzą turyści	
 		while(prom_liczba < liczba_w_grupie && shm_ptr->prom_zajete < X3 && shm_ptr->prom_kierunek == typ_trasy && shm_ptr->prom_odplynal==0){
 		// Blokuje dostęp do wchodzenia wszystkim przewodnikom
-			printf(">>>semid_turysta_wchodzenie %d: ", id_przewodnik);
+			//printf(">>>semid_turysta_wchodzenie %d: ", id_przewodnik);
 			semafor_operacja(semid_turysta_wchodzenie, -1); // Blokujemy dostęp do dalszej części programu dla reszty			
 			
 		// W wypadku gdy przejdzie przez semafor i typ trasy jest inny albo prom jest aktualnie niedostępny || MOŻNA POŁĄCZYĆ W JEDNO, NA POTRZEBY TESTOWANIA SĄ ROZDZIELONE
 			if(shm_ptr->prom_kierunek != typ_trasy){
-				printf(">>>prom_kierunek != typ_trasy %d: ", id_przewodnik);
+				//printf(">>>prom_kierunek != typ_trasy %d: ", id_przewodnik);
 				semafor_operacja(semid_turysta_wchodzenie, 1);
 				continue;
 			}
 			if(shm_ptr->prom_odplynal==1){
-				printf(">>>prom_odplynal==1 %d: ", id_przewodnik);
+				//printf(">>>prom_odplynal==1 %d: ", id_przewodnik);
 				semafor_operacja(semid_turysta_wchodzenie, 1);
 				continue;
 			}
@@ -219,7 +219,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 			if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_START_OFFSET, 0) == -1) {
 				perror("msgrcv failed");
 			} else {
-				printf(BLU"[%d][Przewodnik %d]: otrzymuje OK od promu\n"RESET,typ_trasy, id_przewodnik);
+				//printf(BLU"[%d][Przewodnik %d]: Otrzymuje sygnał od promu\n"RESET,typ_trasy, id_przewodnik);
 			}
 			
 		//2.1. Przewodnik	
@@ -228,7 +228,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 				kom.mtype = PROM + PROM_ENTER_OFFSET;
 				sprintf(kom.mtext, "[Przewodnik %d] chce wejść na prom", id_przewodnik);
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-				printf(BLU"[%d][Przewodnik %d]: wysyła prośbę do promu - przewodnik\n"RESET,typ_trasy, id_przewodnik);
+				//printf(BLU"[%d][Przewodnik %d]: wysyła prośbę do promu - przewodnik\n"RESET,typ_trasy, id_przewodnik);
 				if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_WELCOME_OFFSET, 0) == -1) {
 					perror("msgrcv failed");
 				} 
@@ -246,7 +246,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 				kom.mtype = PROM + PROM_ENTER_OFFSET;
 				sprintf(kom.mtext, "[Turysta %d] chce wejść na prom", grupa[prom_liczba]);
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-				printf(BLU"[%d][Przewodnik %d]: wysyła prośbę do promu - turysta\n"RESET,typ_trasy, id_przewodnik);
+				//printf(BLU"[%d][Przewodnik %d]: wysyła prośbę do promu - turysta\n"RESET,typ_trasy, id_przewodnik);
 				if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_WELCOME_OFFSET, 0) == -1) {
 					perror("msgrcv failed");
 				} 
@@ -268,7 +268,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 				printf("[Prom]: Wszystkie osoby z grupy przewodnika %d weszły na prom\n",id_przewodnik);
 				break;
 			}else if(shm_ptr->prom_zajete == X3){
-				printf(">>>shm_ptr->prom_zajete == X3 %d: ", id_przewodnik);
+				//printf(">>>shm_ptr->prom_zajete == X3 %d: ", id_przewodnik);
 				break;
 			}
 		}

@@ -1,0 +1,8 @@
+#!/bin/bash
+nazwa_procesu=$1
+liczba_uruchomien=$2
+
+
+for ((i=0; i<liczba_uruchomien; i++)); do
+    ./$nazwa_procesu &
+done

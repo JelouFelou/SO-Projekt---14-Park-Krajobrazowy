@@ -33,8 +33,11 @@ int main() {
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 
-	printf(GRN "-------Symulacja parku krajobrazowego - Kasjer %d-------\n\n" RESET,id_kasjer);
-
+	if(shm_ptr->kasjer_istnieje==0){
+		shm_ptr->kasjer_istnieje=1;
+		printf(GRN "-------Symulacja parku krajobrazowego - Kasjer-------\n\n" RESET);
+	}
+	
     // Tworzenie kolejki komunikatów
 	key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
@@ -166,7 +169,7 @@ void reset_pamieci_wspoldzielonej(int sig){
 	shm_ptr->wieza_sygnal = 0;
 	shm_ptr->ilosc_przewodnikow = 0;
 	
-printf(YEL"[DEBUG] Reset pamięci współdzielonej został wykonany.\n"RESET);
+	printf(YEL"[DEBUG] Reset pamięci współdzielonej został wykonany.\n"RESET);
 
     shmdt(shm_ptr);
 }

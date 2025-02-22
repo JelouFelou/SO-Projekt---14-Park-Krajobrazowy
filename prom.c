@@ -77,9 +77,9 @@ int main() {
 		(shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_1 == 0 && shm_ptr->prom_zajete > 0) || 
 		(shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_2 == 0 && shm_ptr->prom_zajete > 0)) {
 	// Prom odpływa
-			printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
+			//printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
 			shm_ptr->prom_odplynal=1;
-			printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
+			//printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
 			printf(BLU"[%d][Prom %d]: Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 			sleep(TPROM);
 			shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
@@ -88,7 +88,7 @@ int main() {
 	// Prom dopływa na drugą stronę		
 			for (int i=0;i<X3;i++){
 				if(grupa_turysci[i]==0){
-					printf("Break turyści: %d\n",i);
+					//printf("Break turyści: %d\n",i);
 					break;
 				}
 				to_przewodnik=0;
@@ -96,6 +96,7 @@ int main() {
 				for(int j=0;j<P;j++){
 					if(grupa_przewodnicy[j]==grupa_turysci[i]){
 						printf("[%d][Prom %d] Przewodnik %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_przewodnik, shm_ptr->prom_zajete, X3);
+						kill(grupa_przewodnicy[j], SIGUSR2);
 						grupa_przewodnicy[j]=0;
 						to_przewodnik=1;
 						break;
@@ -119,7 +120,7 @@ int main() {
 				else printf(YEL"[%d][Prom %d] Otrzymałem informację, że po drugiej stronie znajdują się turyści: %d\n"RESET,shm_ptr->prom_kierunek, id_prom, shm_ptr->turysci_trasa_1);
 				printf(BLU"[%d][Prom %d]: Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 				sleep(TPROM);
-				shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 1 : 2;
+				shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
 				printf(BLU"[%d][Prom %d]: Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 			}
 			
@@ -127,7 +128,7 @@ int main() {
 			shm_ptr->prom_odplynal=0;
 			l=0;
 			k=0;
-			printf("%d\n",shm_ptr->prom_zajete);
+			//printf("prom_zajete: %d\n",shm_ptr->prom_zajete);
 			continue;
 		}
 
@@ -143,7 +144,7 @@ int main() {
 		(shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_2 == 0 && shm_ptr->prom_zajete > 0)) {
 			continue;
 		}
-		printf("Wysyła komunikat OK.1\n");
+		//printf("Wysyła komunikat OK.1\n");
 		
 	//2. Wyczekujemy na komunikat zwrotny
         if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_ENTER_OFFSET, 0) == -1) {
@@ -161,13 +162,13 @@ int main() {
 				kom.mtype = PROM + PROM_WELCOME_OFFSET;
 				sprintf(kom.mtext, "WELCOME");
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-				printf("Wysyła komunikat OK.2\n");
+				//printf("Wysyła komunikat OK.2\n");
 				
 				grupa_turysci[k]=id_przewodnik;
 				grupa_przewodnicy[l]=id_przewodnik;
 				k++;
 				l++;
-				printf("Przewodnik\n");
+				//printf("Przewodnik\n");
 			} else {
 				printf(RED"Błąd przy odczytywaniu wiadomości od przewodnika: %s\n"RESET, kom.mtext);
 				continue;
@@ -184,10 +185,10 @@ int main() {
 				kom.mtype = PROM + PROM_WELCOME_OFFSET;
 				sprintf(kom.mtext, "WELCOME");
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-				printf("Wysyła komunikat OK.3\n");
+				//printf("Wysyła komunikat OK.3\n");
 				grupa_turysci[k]=id_turysta;
 				k++;
-				printf("Turysta\n");
+				//printf("Turysta\n");
 			} else {
 				printf(RED"Błąd przy odczytywaniu wiadomości od turysty: %s\n"RESET, kom.mtext);
 				continue;
@@ -202,41 +203,39 @@ int main() {
 }
 
 void przedwczesne_wyjscie(int sig_n){
-	printf("\n[Prom] Odpływa żeby przejść prace konserwacyjne, ale pierwsze przewozi turystów na drugą stronę\n");
 	int shm_id;
     SharedData *shm_ptr = shm_get(&shm_id);
 	int id_prom = getpid();
 	
+	printf("\n[Prom %d] Odpływa żeby przejść prace konserwacyjne, ale pierwsze przewozi turystów na drugą stronę\n",id_prom);
+	
 	// Wysiadają turyści
 	for (int i=0;i<X3;i++){
 		if(grupa_turysci[i]==0){
-			printf("Break turyści: %d\n",i);
+			//printf("Break turyści: %d\n",i);
 			break;
 		}
-		int to_przewodnik=0;
-		kom.mtype = PROM + grupa_turysci[i] + PROM_EXIT_OFFSET;
-		sprintf(kom.mtext, "PROM");
-		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		to_przewodnik=0;
 		shm_ptr->prom_zajete--;
 		for(int j=0;j<P;j++){
 			if(grupa_przewodnicy[j]==grupa_turysci[i]){
 				printf("[%d][Prom %d] Przewodnik %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_przewodnik, shm_ptr->prom_zajete, X3);
+				kill(grupa_przewodnicy[j], SIGUSR2);
 				grupa_przewodnicy[j]=0;
 				to_przewodnik=1;
 				break;
 			}
 		}
 		if(to_przewodnik==0){
+			kom.mtype = PROM + grupa_turysci[i] + PROM_EXIT_OFFSET;
+			sprintf(kom.mtext, "PROM");
+			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 			printf("[%d][Prom %d] Turysta %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3);
 		}
 		grupa_turysci[i]=0;
-		sleep(1);
 	}
 	
-	shm_ptr->prom_odplynal=0;
-	shm_ptr->prom_istnieje=0;
-	shm_ptr->prom_zajete=0;
-	shm_ptr->prom_kierunek=0;
+	printf("\n[Prom %d] Wszyscy turyści opuścili prom\n",id_prom);
 	
 	shmdt(shm_ptr);
     exit(1);

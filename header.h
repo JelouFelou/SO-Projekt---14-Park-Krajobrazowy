@@ -75,13 +75,6 @@ int czy_istnieje(int pid) {
 	}
 }
 
-void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
-    if (typ_trasy == 1) {
-        shm_ptr->turysci_trasa_1--;
-    } else if (typ_trasy == 2) {
-        shm_ptr->turysci_trasa_2--;
-    }
-}
 
 // Struktura pamięci współdzielonej
 typedef struct {
@@ -105,8 +98,14 @@ typedef struct {
 	int turysta_wchodzenie;
 	int czekajaca_grupa;
 	int prom_odplynal;
+	
+	// Wypisywanie informacji o symulacji tylko raz
 	int prom_istnieje;
+	int przewodnik_istnieje;
+	int turysta_istnieje;
+	int kasjer_istnieje;
 } SharedData;
+
 
 // Inicjalizacja Pamięci Współdzielonej
 SharedData* shm_init(int* shm_id){
@@ -149,9 +148,13 @@ SharedData* shm_init(int* shm_id){
 		shm_ptr->turysta_wchodzenie = 0;
 		shm_ptr->czekajaca_grupa = 0;
 		shm_ptr->prom_odplynal = 0;
+		shm_ptr->przewodnik_istnieje = 0;
+		shm_ptr->turysta_istnieje = 0;
+		shm_ptr->kasjer_istnieje = 0;
 	}
 	return shm_ptr;
 }
+
 
 SharedData* shm_get(int* shm_id){
 	// Tworzymy segment pamięci współdzielonej
@@ -174,5 +177,12 @@ SharedData* shm_get(int* shm_id){
 	return shm_ptr;
 }
 
+void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
+    if (typ_trasy == 1) {
+        shm_ptr->turysci_trasa_1--;
+    } else if (typ_trasy == 2) {
+        shm_ptr->turysci_trasa_2--;
+    }
+}
 
 #endif

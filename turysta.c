@@ -53,7 +53,10 @@ int main() {
 	
 	signal(SIGTERM,przedwczesne_wyjscie);
 	
-	printf(GRN "-------Symulacja parku krajobrazowego - Turysta %d-------\n\n" RESET,id_turysta);
+	if(shm_ptr->turysta_istnieje==0){
+		shm_ptr->turysta_istnieje=1;
+		printf(GRN "-------Symulacja parku krajobrazowego - Turysta-------\n\n" RESET);
+	}
 
     // Pobieranie ID kolejki komunikatów
 	key_kolejka = ftok(".", 99);
