@@ -27,6 +27,8 @@
 #define PROM_START_OFFSET 31000
 #define PROM_EXIT_OFFSET 32000
 #define PROM_READY_OFFSET 33000
+#define PROM_ENTER_OFFSET 34000
+#define PROM_WELCOME_OFFSET 35000
 
 // Kolory
 #define RED   "\x1B[31m"
@@ -71,6 +73,14 @@ int czy_istnieje(int pid) {
 			return 0;
 		}
 	}
+}
+
+void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
+    if (typ_trasy == 1) {
+        shm_ptr->turysci_trasa_1--;
+    } else if (typ_trasy == 2) {
+        shm_ptr->turysci_trasa_2--;
+    }
 }
 
 // Struktura pamięci współdzielonej

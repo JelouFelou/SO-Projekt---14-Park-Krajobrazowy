@@ -20,7 +20,7 @@ int main() {
 	int id_turysta = getpid();
 	int id_przewodnik = 0;
 	int id_kasjer = 0;
-	int vip = (rand() % 100 == 47);
+	int vip = 0;//(rand() % 100 == 47);
 	int typ_trasy = 0;
 	int wiek = 0;
 	
