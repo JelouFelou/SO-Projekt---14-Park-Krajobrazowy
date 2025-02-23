@@ -57,6 +57,7 @@ void semafor_operacja(int semid, int zmiana) {
     }
 }
 
+// Funkcja sprawdzająca czy dany proces istnieje
 int czy_istnieje(int pid) {
 	if (kill(pid, 0) == 0) {
 		// Proces istnieje.
@@ -76,27 +77,34 @@ int czy_istnieje(int pid) {
 }
 
 
-// Struktura pamięci współdzielonej
+// ---- Pamięć Współdzielona
+
+// Struktura
 typedef struct {
-    int liczba_osob_na_moscie;
-	int liczba_osob_na_wiezy;
-	int liczba_osob_na_promie;
+	int init;
+	
+	// Turysta
+	int liczba_turystow;
+	
+	//Przewodnik
+	int turysci_w_grupie;
+	int ilosc_przewodnikow;
+	
+	// Most
+	int liczba_osob_na_moscie;
 	int most_kierunek;
-	int prom_kierunek;
-	int prom_zajete;
 	int czekajacy_przewodnicy_most;
-	int czekajace_grupy_prom;
 	int przewodnicy_most;
+	
+	// Wieża
+	int liczba_osob_na_wiezy;
+	int wieza_sygnal;
+	
+	// Prom
 	int turysci_trasa_1;
 	int turysci_trasa_2;
-	int liczba_turystow;
-	int turysci_w_grupie;
-	int wieza_sygnal;
-	int ilosc_przewodnikow;	
-	int prom_blokada;
-	int turysta_blokada;
-	int turysta_wchodzenie;
-	int czekajaca_grupa;
+	int prom_kierunek;
+	int prom_zajete;
 	int prom_odplynal;
 	
 	// Wypisywanie informacji o symulacji tylko raz
@@ -107,19 +115,16 @@ typedef struct {
 } SharedData;
 
 
-// Inicjalizacja Pamięci Współdzielonej
+// Inicjalizacja 
 SharedData* shm_init(int* shm_id){
 	// Tworzymy segment pamięci współdzielonej
     key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
-	int init;
 	
     *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
     if (*shm_id == -1) {
         perror("shmget");
         exit(1);
-    }else{
-		init = 1;
-	}
+    }
 
     SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
     if (shm_ptr == (void *)-1) {
@@ -127,55 +132,42 @@ SharedData* shm_init(int* shm_id){
         exit(1);
     }	
 	
-	if(init){
-		shm_ptr->liczba_osob_na_moscie = 0;
-        shm_ptr->liczba_osob_na_wiezy = 0;
-        shm_ptr->liczba_osob_na_promie = 0;
-        shm_ptr->most_kierunek = 0;
-        shm_ptr->prom_kierunek = 0;
-        shm_ptr->prom_zajete = 0;
-        shm_ptr->czekajacy_przewodnicy_most = 0;
-        shm_ptr->czekajace_grupy_prom = 0;
-        shm_ptr->przewodnicy_most = 0;
-        shm_ptr->turysci_trasa_1 = 0;
-        shm_ptr->turysci_trasa_2 = 0;
-        shm_ptr->liczba_turystow = 0;
-		shm_ptr->turysci_w_grupie = 0;
-        shm_ptr->wieza_sygnal = 0;
-        shm_ptr->ilosc_przewodnikow = 0;
-		shm_ptr->prom_blokada = 0;
-		shm_ptr->turysta_blokada = 0;
-		shm_ptr->turysta_wchodzenie = 0;
-		shm_ptr->czekajaca_grupa = 0;
-		shm_ptr->prom_odplynal = 0;
-		shm_ptr->przewodnik_istnieje = 0;
-		shm_ptr->turysta_istnieje = 0;
-		shm_ptr->kasjer_istnieje = 0;
-	}
-	return shm_ptr;
-}
-
-
-SharedData* shm_get(int* shm_id){
-	// Tworzymy segment pamięci współdzielonej
-    key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
-	int init;
+	if(shm_ptr->init != 1){
+		shm_ptr->init = 1;
+		
+		// Turysta
+		shm_ptr->liczba_turystow=0;
 	
-    *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
-    if (*shm_id == -1) {
-        perror("shmget");
-        exit(1);
-    }else{
-		init = 1;
+		//Przewodnik
+		shm_ptr->turysci_w_grupie=0;
+		shm_ptr->ilosc_przewodnikow=0;
+	
+		// Most
+		shm_ptr->liczba_osob_na_moscie=0;
+		shm_ptr->most_kierunek=0;
+		shm_ptr->czekajacy_przewodnicy_most=0;
+		shm_ptr->przewodnicy_most=0;
+	
+		// Wieża
+		shm_ptr->liczba_osob_na_wiezy=0;
+		shm_ptr->wieza_sygnal=0;
+	
+		// Prom
+		shm_ptr->turysci_trasa_1=0;
+		shm_ptr->turysci_trasa_2=0;
+		shm_ptr->prom_kierunek=0;
+		shm_ptr->prom_zajete=0;
+		shm_ptr->prom_odplynal=0;
+	
+		// Wypisywanie informacji o symulacji tylko raz
+		shm_ptr->prom_istnieje=0;
+		shm_ptr->przewodnik_istnieje=0;
+		shm_ptr->turysta_istnieje=0;
+		shm_ptr->kasjer_istnieje=0;
 	}
-
-    SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
-    if (shm_ptr == (void *)-1) {
-        perror("shmat");
-        exit(1);
-    }	
 	return shm_ptr;
 }
+
 
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
     if (typ_trasy == 1) {

@@ -56,6 +56,8 @@ int main() {
 	int wyczekuje = 1;
 	int pomylka = 0;
 	int odbiera = 1;
+	int wydluzenie=0;
+	float czas_trasa=0;
 	
 	// Klucze do kolejki i semaforów								 
 	key_t key_kolejka;
@@ -146,29 +148,41 @@ int main() {
 				sprintf(kom.mtext, "OK");
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 			}
+			for (int j = 0; j < liczba_w_grupie; j++){
+				if(wiek_turysty[j]<12){
+					wydluzenie=1;
+					printf("[%d][Przewodnik %d]: W naszej grupie jest osoba poniżej 12 roku życia, wycieczka zajmie dłużej\n",przypisana_trasa, id_przewodnik);
+					break;
+				}
+			}
+			
+			czas_trasa = rand() % 2 + 1;
+			if(wydluzenie==1){
+				czas_trasa *= 1.5;
+			}
 			
 			// Start wycieczki zależny od przypisana_trasa
 			switch(przypisana_trasa) {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
-				sleep(1);
-				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
-				sleep(1);
-				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
-				sleep(1);
-				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
-				sleep(1);
+				sleep(czas_trasa);
+				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie);
+				sleep(czas_trasa);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie);
+				sleep(czas_trasa);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
+				sleep(czas_trasa);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			case 2:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
-				sleep(1);
-				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie);
-				sleep(1);
-				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie);
-				sleep(1);
-				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie);
-				sleep(1);
+				sleep(czas_trasa);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
+				sleep(czas_trasa);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie);
+				sleep(czas_trasa);
+				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie);
+				sleep(czas_trasa);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			default:
@@ -194,6 +208,8 @@ int main() {
 			liczba_w_grupie = 0;
 			przypisana_trasa = 0;
 			wyczekuje = 1;
+			wydluzenie = 0;
+			czas_trasa = 0;
 			printf("\n");
         }
 		
@@ -266,7 +282,7 @@ void awaryjne_wyjscie(int sig_n) {
 	extern int semid_przewodnik_most, semid_przewodnik_prom, semid_przewodnik_wieza;
     
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
 
     struct komunikat kom;
@@ -303,7 +319,7 @@ void przedwczesne_wyjscie(int sig_n){
 	int id_przewodnik = getpid();
 	printf("[Przewodnik %d]: przedwcześnie opuszcza park\n", id_przewodnik);
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
 	for (int i = 0; i < liczba_w_grupie; i++){
 		kill(grupa[i], SIGTERM);

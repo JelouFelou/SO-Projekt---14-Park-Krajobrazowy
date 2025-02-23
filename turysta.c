@@ -32,7 +32,7 @@ int main() {
 	}
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	
 	// Jeśli turysta jest VIP-em – ustawiamy losowo trasę oraz wiek
 	if(vip){
@@ -98,7 +98,7 @@ int main() {
 		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
 			perror("msgrcv failed");
 		} else {
-			printf("[Turysta %d] odbiera %s\n\n", id_turysta, kom.mtext);
+			printf("[Turysta %d] odbiera %s\n", id_turysta, kom.mtext);
 			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d", &typ_trasy, &wiek, &id_przewodnik);
 		}
 		
@@ -111,25 +111,25 @@ int main() {
 		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
 			perror("msgrcv failed");
 		} else {
-			printf("[Turysta %d] jest podekscytowany zwiedzaniem parku!\n", id_turysta);
+			printf(GRN"[Turysta %d] jest podekscytowany zwiedzaniem parku!\n"RESET, id_turysta);
 		}
 	
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
 			case(1):
-				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
 				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 			case(2):
 				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				//TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
 				break;
 		}
 		
 		//X. Koniec wycieczki
-		printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);
+		//printf(GRN "\n-------Koniec wycieczki-------\n\n" RESET);
 		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1){
 			perror("msgrcv failed");
 		}
@@ -159,25 +159,29 @@ void przedwczesne_wyjscie(int sig_n){
 
 void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	struct komunikat kom;
+	
+	float czas = 0;
 	
 //1. Turysta czeka na sygnał od przewodnika
 	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
 		perror("msgrcv failed");
+	}else{
+		sscanf(kom.mtext, "OK %f", &czas);
 	}
 	
 // --- Rozpoczęcie mostu wiszącego
-	printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
-	sleep(TMOST);
+	//printf(GRN "\n-------Most Wiszący-------\n\n" RESET);
+	sleep(1);
 	if(wiek<15){
 		printf("[Turysta %d]: Wchodzę na most pod opieką osoby dorosłej...\n", id_turysta);
 	}else{
 		printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
 	}
-	sleep(1);
+	sleep(czas);
 	printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
-	sleep(TMOST);
+	sleep(czas);
 	printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
 	shm_ptr->liczba_osob_na_moscie--;
 	
@@ -193,16 +197,20 @@ void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 
 void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	struct komunikat kom;
+	
+	float czas = 0;
 	
 //1. Turysta czeka na sygnał od przewodnika
 	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_turysta, 0) == -1) {
         perror("msgrcv failed (Wieża)");
-    }
+    }else{
+		sscanf(kom.mtext, "OK %f", &czas);
+	}
 	
 // --- Rozpoczęcie wchodzenia na wieżę widokową
-	printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
+	//printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	// Turysta wchodzi na wieżę jedną klatką schodową
 	if(wiek<=5){
 		printf("[Turysta %d]: Czekam pod wieżą aż reszta grupy zejdzie...\n", id_turysta);
@@ -214,7 +222,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	
 	//Turysta na wieży
 	if(wiek>5){
-		sleep(TWIEZA);
+		sleep(czas);
 		printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
 		sleep(1);
 		printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
@@ -225,7 +233,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 			shm_ptr->liczba_osob_na_wiezy--;
 		}else{
 			printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-			sleep(TWIEZA);
+			sleep(czas);
 			printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
 			shm_ptr->liczba_osob_na_wiezy--;
 		}
@@ -244,7 +252,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 
 void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika
@@ -259,7 +267,7 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
     }
 	
 // --- Rozpoczęcie płynięcia promem
-	printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
+	//printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
 			
 	if(wiek<15){
 		printf("[Turysta %d]: Wchodzę na prom pod opieką osoby dorosłej...\n", id_turysta);

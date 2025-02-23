@@ -17,17 +17,19 @@ int id_przewodnik, id_turysta;
 int IDkolejki, semid_prom, semid_czekajaca_grupa;
 int grupa_przewodnicy[P], grupa_turysci[X3];
 	
+int to_przewodnik=0;
 
 int main() {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	
 	int id_prom = getpid();
 	int wyczekuje=1;
-	int to_przewodnik=0;
 	int k=0;
 	int l=0;
+	int wydluzenie=0;
+	int wydluzenie_prom=0;
 	
 	if(shm_ptr->prom_istnieje==1){
 		printf("Prom już odpłynął\n");
@@ -77,18 +79,20 @@ int main() {
 		(shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_1 == 0 && shm_ptr->prom_zajete > 0) || 
 		(shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_2 == 0 && shm_ptr->prom_zajete > 0)) {
 	// Prom odpływa
-			//printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
+			float czas = rand() % 10 + 1;
+			if(wydluzenie_prom==1){
+				czas *= 1.5;
+			}
+			
 			shm_ptr->prom_odplynal=1;
-			//printf("Zajęte: %d; Kierunek: %d (1: %d | 2: %d) Prom odplynal: %d\n",shm_ptr->prom_zajete, shm_ptr->prom_kierunek, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, shm_ptr->prom_odplynal);
-			printf(BLU"[%d][Prom %d]: Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
-			sleep(TPROM);
+			printf(BLU"[%d][Prom %d] Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+			sleep(czas);
 			shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
-			printf(BLU"[%d][Prom %d]: Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+			printf(BLU"[%d][Prom %d] Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 	
 	// Prom dopływa na drugą stronę		
 			for (int i=0;i<X3;i++){
 				if(grupa_turysci[i]==0){
-					//printf("Break turyści: %d\n",i);
 					break;
 				}
 				to_przewodnik=0;
@@ -118,17 +122,18 @@ int main() {
 			if((shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_1==0 && shm_ptr->turysci_trasa_2>0) || (shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_2==0 && shm_ptr->turysci_trasa_1>0)){
 				if(shm_ptr->prom_kierunek==1) printf(YEL"[%d][Prom %d] Otrzymałem informację, że po drugiej stronie znajdują się turyści: %d\n"RESET,shm_ptr->prom_kierunek, id_prom, shm_ptr->turysci_trasa_2);
 				else printf(YEL"[%d][Prom %d] Otrzymałem informację, że po drugiej stronie znajdują się turyści: %d\n"RESET,shm_ptr->prom_kierunek, id_prom, shm_ptr->turysci_trasa_1);
-				printf(BLU"[%d][Prom %d]: Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
-				sleep(TPROM);
+				printf(BLU"[%d][Prom %d] Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+				sleep(czas);
 				shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
-				printf(BLU"[%d][Prom %d]: Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+				printf(BLU"[%d][Prom %d] Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 			}
 			
-			printf("[%d][Prom %d]: Sygnalizuje turystom by wsiadać na prom\n",shm_ptr->prom_kierunek,id_prom);
+			printf("[%d][Prom %d] Sygnalizuje turystom by wsiadać na prom\n",shm_ptr->prom_kierunek,id_prom);
 			shm_ptr->prom_odplynal=0;
 			l=0;
 			k=0;
 			//printf("prom_zajete: %d\n",shm_ptr->prom_zajete);
+			wydluzenie_prom=0;
 			continue;
 		}
 
@@ -176,8 +181,10 @@ int main() {
 		} 
 	//2.1. Sprawdzamy, czy wiadomość zaczyna się od "[Turysta"
 		else if (strncmp(kom.mtext, "[Turysta", 8) == 0) {
-			if (sscanf(kom.mtext, "[Turysta %d] chce wejść na prom", &id_turysta) == 1) {
+			if (sscanf(kom.mtext, "[Turysta %d] chce wejść na prom %d", &id_turysta, &wydluzenie) == 2) {
 				if (!czy_istnieje(id_turysta)) continue;
+				if (wydluzenie) wydluzenie_prom=1;
+				
 				shm_ptr->prom_zajete++;
 				LiczbaTurysciTrasy(shm_ptr->prom_kierunek, shm_ptr); // Zmniejsza liczbę osób danej strony o 1
 				printf("[%d][Prom %d] Zaprasza turystę %d na prom (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3);
@@ -204,11 +211,11 @@ int main() {
 
 void przedwczesne_wyjscie(int sig_n){
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
 	int id_prom = getpid();
 	
 	printf("\n[Prom %d] Odpływa żeby przejść prace konserwacyjne, ale pierwsze przewozi turystów na drugą stronę\n",id_prom);
-	
+	shm_ptr->prom_istnieje=0;
 	// Wysiadają turyści
 	for (int i=0;i<X3;i++){
 		if(grupa_turysci[i]==0){

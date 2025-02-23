@@ -10,7 +10,7 @@
 #include <time.h>
 #include "header.h"
 
-void reset_pamieci_wspoldzielonej(int);
+void przedwczesne_wyjscie(int);
 int sygnal=0;
 
 
@@ -45,7 +45,7 @@ int main() {
         exit(1);
     }
 	
-	signal(SIGUSR1, reset_pamieci_wspoldzielonej);
+	signal(SIGTERM, przedwczesne_wyjscie);
 	
 	
 // ---- Pętla kasjera ----
@@ -149,27 +149,43 @@ int main() {
     return 0;
 }
 
-void reset_pamieci_wspoldzielonej(int sig){
+void przedwczesne_wyjscie(int sig){
 	int shm_id;
-    SharedData *shm_ptr = shm_get(&shm_id);
+    SharedData *shm_ptr = shm_init(&shm_id);
+	int id_kasjer = getpid();
 	
-	sygnal=1;
-	shm_ptr->liczba_osob_na_moscie = 0;
-    shm_ptr->liczba_osob_na_wiezy = 0;
-    shm_ptr->liczba_osob_na_promie = 0;
-    shm_ptr->most_kierunek = 0;
-    shm_ptr->prom_kierunek = 0;
-    shm_ptr->prom_zajete = 0;
-	shm_ptr->czekajacy_przewodnicy_most = 0;
-    shm_ptr->czekajace_grupy_prom = 0;
-    shm_ptr->przewodnicy_most = 0;
-    shm_ptr->turysci_trasa_1 = 0;
-	shm_ptr->turysci_trasa_2 = 0;
-    shm_ptr->liczba_turystow = 0;
-	shm_ptr->wieza_sygnal = 0;
-	shm_ptr->ilosc_przewodnikow = 0;
+	printf("[Kasjer %d] przedwcześnie opuszcza park\n", id_kasjer);
 	
-	printf(YEL"[DEBUG] Reset pamięci współdzielonej został wykonany.\n"RESET);
+	// Turysta
+	shm_ptr->liczba_turystow=0;
+	
+	//Przewodnik
+	shm_ptr->turysci_w_grupie=0;
+	shm_ptr->ilosc_przewodnikow=0;
+	
+	// Most
+	shm_ptr->liczba_osob_na_moscie=0;
+	shm_ptr->most_kierunek=0;
+	shm_ptr->czekajacy_przewodnicy_most=0;
+	shm_ptr->przewodnicy_most=0;
+	
+	// Wieża
+	shm_ptr->liczba_osob_na_wiezy=0;
+	shm_ptr->wieza_sygnal=0;
+	
+	// Prom
+	shm_ptr->turysci_trasa_1=0;
+	shm_ptr->turysci_trasa_2=0;
+	shm_ptr->prom_kierunek=0;
+	shm_ptr->prom_zajete=0;
+	shm_ptr->prom_odplynal=0;
+	
+	// Wypisywanie informacji o symulacji tylko raz
+	shm_ptr->prom_istnieje=0;
+	shm_ptr->przewodnik_istnieje=0;
+	shm_ptr->turysta_istnieje=0;
+	shm_ptr->kasjer_istnieje=0;
 
     shmdt(shm_ptr);
+	exit(1);
 }
