@@ -15,12 +15,14 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
 void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
 
 int main() {
-	srand(time(NULL));
+	srand((unsigned)time(NULL) ^ (getpid() << 16));
 	struct komunikat kom;
+	int IDkolejki;
+	
 	int id_turysta = getpid();
 	int id_przewodnik = 0;
 	int id_kasjer = 0;
-	int vip = 0;//(rand() % 100 == 47);
+	int vip = (rand() % 100 == 47);
 	int typ_trasy = 0;
 	int wiek = 0;
 	
@@ -37,13 +39,11 @@ int main() {
 	// Jeśli turysta jest VIP-em – ustawiamy losowo trasę oraz wiek
 	if(vip){
 		typ_trasy = (rand() % 2) + 1;
-		wiek = (rand() % 80) + 1;
+		wiek = (rand() % 62) + 18;
 	}
 	// Dla zwykłego turysty dane (typ trasy i wiek) zostaną nadane przez kasjera
 	
-    key_t key_kolejka;
-	int IDkolejki;
-
+	
 	if(shm_ptr->liczba_turystow==N){
 		printf("Osiągnięto już limit turystów danego dnia\n");
 		exit(1);
@@ -53,17 +53,50 @@ int main() {
 	
 	signal(SIGTERM,przedwczesne_wyjscie);
 	
+	// Ten napis zostanie wypisany tylko raz
 	if(shm_ptr->turysta_istnieje==0){
 		shm_ptr->turysta_istnieje=1;
 		printf(GRN "-------Symulacja parku krajobrazowego - Turysta-------\n\n" RESET);
 	}
 
     // Pobieranie ID kolejki komunikatów
-	key_kolejka = ftok(".", 99);
+	key_t key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
+	
+	// Odpowiedzialne za kontrolę dostępu do atrakcji przez innych przewodników
+	key_t key_most = ftok(".", 200);
+	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora mostu");
+		exit(1);
+	}
+	key_t key_wieza = ftok(".", 201);
+	if ((semid_wieza = semget(key_wieza, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora wieży");
+		exit(1);
+	}
+	key_t key_prom = ftok(".", 202);
+	if ((semid_prom = semget(key_prom, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora promu");
+		exit(1);
+	}
+	key_t key_turysta_wchodzenie = ftok(".", 203);
+	if ((semid_turysta_wchodzenie = semget(key_turysta_wchodzenie, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora turysta_wchodzenie");
+		exit(1);
+	}
+	key_t key_czekajaca_grupa = ftok(".", 204);
+	if ((semid_czekajaca_grupa = semget(key_czekajaca_grupa, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora turysta_wchodzenie");
+		exit(1);
+	}
+	key_t key_most_wchodzenie = ftok(".", 205);
+	if ((semid_most_wchodzenie = semget(key_most_wchodzenie, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora most_wchodzenie");
+		exit(1);
+	}
 	
 
 // Początek symulacji turysty
@@ -134,11 +167,14 @@ int main() {
 			perror("msgrcv failed");
 		}
 		
-	} else { // Turysta jest vipem
-		printf(YEL"[Turysta %d] jest vipem\n"RESET, id_turysta);
+	} 
+	else { // Turysta jest vipem
+		printf(YEL"[Turysta %d] jest vipem i decyduje się pójść trasą %d\n"RESET, id_turysta, typ_trasy);
 		sleep(2);
+		czas_trasa = rand() % 2 + 1;
 		switch(typ_trasy){
 			case(1):
+				
 				break;
 			case(2):
 				break;
@@ -180,7 +216,7 @@ void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 		printf("[Turysta %d]: Wchodzę na most...\n", id_turysta);
 	}
 	sleep(czas);
-	printf("[Turysta %d]: Podziwia widoki\n", id_turysta);
+	printf("[Turysta %d]: Podziwiam widoki\n", id_turysta);
 	sleep(czas);
 	printf("[Turysta %d]: Dotarłem na koniec mostu...\n", id_turysta);
 	shm_ptr->liczba_osob_na_moscie--;
@@ -226,7 +262,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 		printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
 		sleep(1);
 		printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-	
+		sleep(2);
 	// Turysta schodzi z wieży drugą klatką schodową
 		if(shm_ptr->wieza_sygnal == 1){
 			printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
@@ -295,5 +331,150 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
         perror("msgsnd failed (Prom - DONE)");
     }
 
+	shmdt(shm_ptr);
+}
+
+void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	float czas = rand() % 10 + 1;
+	
+	semafor_operacja(semid_most_wchodzenie, -1);
+	if(shm_ptr->most_kierunek == 0){ // Most wolny, ustawiamy kierunek
+		shm_ptr->most_kierunek = typ_trasy;
+		printf("[VIP | %d][Turysta %d]: Droga wolna! Most jest już dostępny\n",typ_trasy, id_turysta);
+		semafor_operacja(semid_most_wchodzenie, 1);
+	}else if(shm_ptr->most_kierunek != typ_trasy){ // Most zajęty przez inną trasę, czekamy
+		shm_ptr->czekajacy_przewodnicy_most++;
+		semafor_operacja(semid_most_wchodzenie, 1);
+		semafor_operacja(semid_most,-1);
+		shm_ptr->most_kierunek=typ_trasy;
+		printf("[VIP | %d][Turysta %d]: Droga jest już wolna! Most jest już dostępny\n",typ_trasy, id_turysta);
+	}else if(shm_ptr->most_kierunek == typ_trasy){
+		printf("[VIP | %d][Turysta %d]: Inna grupa porusza się tą samą trasą co ja, mogę wejść na ten most\n",typ_trasy, id_turysta);
+		semafor_operacja(semid_most_wchodzenie, 1);
+	}
+	
+	if(shm_ptr->liczba_osob_na_moscie <= X1){
+		shm_ptr->liczba_osob_na_moscie++;
+		printf("[VIP | %d][Turysta %d]: Wchodzę na most...\n",typ_trasy, id_turysta);
+		sleep(czas);
+		printf("[VIP | %d][Turysta %d]: Podziwiam widoki\n",typ_trasy, id_turysta);
+		sleep(czas);
+		printf("[VIP | %d][Turysta %d]: Dotarłem na koniec mostu...\n",typ_trasy, id_turysta);
+		shm_ptr->liczba_osob_na_moscie--;
+	}
+	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
+	shmdt(shm_ptr);
+}
+
+void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy,){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	
+	float czas = rand() % 10 + 1;
+	
+	printf("[VIP | %d][Turysta %d]: Widzę wieże...\n",typ_trasy, id_turysta);
+	while(1){
+		if(shm_ptr->liczba_osob_na_wiezy <= X2){
+		//1. Dopuszczenie turysty do wejścia na wieżę
+			shm_ptr->liczba_osob_na_wiezy++;
+			printf("[VIP | %d][Turysta %d]: Wchodzę na wieżę...\n",typ_trasy, id_turysta);
+			sleep(czas);
+			printf("[VIP | %d][Turysta %d]: Wszedłem na wieżę...\n",typ_trasy, id_turysta);
+			sleep(1);
+			printf("[VIP | %d][Turysta %d]: Podziwia widoki...\n",typ_trasy, id_turysta);
+			sleep(2);
+			printf("[VIP | %d][Turysta %d]: Zchodzi z wieży...\n",typ_trasy, id_turysta);
+			sleep(czas);
+			printf("[VIP | %d][Turysta %d]: Zszedł z wieży i czeka na resztę...\n",typ_trasy, id_turysta);
+			shm_ptr->liczba_osob_na_wiezy--;
+			break;
+		}else{
+			printf("[VIP | %d][Turysta %d]: Wieża pełna (obecnie: %d osób). Czekam na zwolnienie miejsca...\n",typ_trasy,id_turysta, shm_ptr->liczba_osob_na_wiezy);
+			sleep(5);
+			continue;
+		}
+	}
+	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
+	shmdt(shm_ptr);
+}
+
+void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy,){
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
+	struct komunikat kom;
+	
+	int wydluzenie=0;
+	
+	float czas = rand() % 10 + 1;
+	
+	if(typ_trasy==1){
+		shm_ptr->turysci_trasa_1++;
+	}else if(typ_trasy==2){
+		shm_ptr->turysci_trasa_2++;
+	}
+	printf("[Turysta %d]: Widzi prom\n", id_turysta);
+	sleep(1);
+	printf("[%d][Turysta %d]: Sprawdzam stan promu...\n",typ_trasy, id_przewodnik);
+	if(shm_ptr->prom_kierunek==0){
+		shm_ptr->prom_kierunek=typ_trasy;
+		printf("[%d][Turysta %d]: Prom znajduje się po mojej %d stronie\n",typ_trasy, id_przewodnik, shm_ptr->prom_kierunek);
+	}
+	
+	while(1){
+		semafor_operacja(semid_turysta_wchodzenie, -1);
+		
+	// W wypadku gdy przejdzie przez semafor i typ trasy jest inny albo prom jest aktualnie niedostępny || MOŻNA POŁĄCZYĆ W JEDNO, NA POTRZEBY TESTOWANIA SĄ ROZDZIELONE
+		if(shm_ptr->prom_kierunek != typ_trasy){
+			semafor_operacja(semid_turysta_wchodzenie, 1);
+			continue;
+		}
+		if(shm_ptr->prom_odplynal==1){
+			semafor_operacja(semid_turysta_wchodzenie, 1);
+			continue;
+		}	
+	//1. Odczytuje komunikat OK od promu
+		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_START_OFFSET, 0) == -1) {
+			perror("msgrcv failed");
+		}
+		
+		if (shm_ptr->prom_zajete < X3 && shm_ptr->prom_kierunek == typ_trasy){
+		// Wysyłana jest informacja do promu, że turysta wchodzi na prom
+			kom.mtype = PROM + PROM_ENTER_OFFSET;
+			sprintf(kom.mtext, "[Turysta %d] chce wejść na prom %d", grupa[prom_liczba], wydluzenie);
+			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+			
+			if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_WELCOME_OFFSET, 0) == -1) {
+				perror("msgrcv failed");
+			} else {
+			//Wysyłana jest informacja do turysty by wszedł na prom
+				printf("[Turysta %d]: Wchodzę na prom...\n", id_turysta);
+				sleep(2);
+				printf("[Turysta %d]: Czekam na promie...\n", id_turysta);
+				
+				sleep(1);
+				printf("[%d][Turysta %d]: Wchodzę na prom (miejsc zajętych: %d/%d) (1:%d 2:%d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2);
+				semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
+				break;
+			}
+		} 	
+		if(shm_ptr->prom_zajete == X3){
+			break;
+		}
+	}
+	
+	if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + id_turysta + PROM_EXIT_OFFSET, 0) == -1) {
+        perror("msgrcv failed (Prom - PROM)");
+    } else {
+        if (strcmp(kom.mtext, "PROM") == 0) {
+            printf("[Turysta %d]: Przeplynąłem promem na drugą stronę\n", id_turysta);
+        } else {
+            printf("[Turysta %d]: Otrzymałem nieoczekiwany komunikat: %s\n", id_turysta, kom.mtext);
+        }
+    }
+	
+	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
 	shmdt(shm_ptr);
 }
