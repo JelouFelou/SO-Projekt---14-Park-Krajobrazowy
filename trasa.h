@@ -124,7 +124,7 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 		czas *= 1.5;
 	}
 	
-	signal(SIGUSR2, handler_wieza_sygnal);
+	signal(SIGUSR4, handler_wieza_sygnal);
 	
 	//printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[%d][Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n",typ_trasy, id_przewodnik);
@@ -157,14 +157,14 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 		}
 	}
 
-	printf("[Przewodnik %d]: Czekam aż wszyscy zejdą z wieży widokowej\n", id_przewodnik);
+	printf("[%d][Przewodnik %d]: Czekam aż wszyscy zejdą z wieży widokowej\n",typ_trasy, id_przewodnik);
 	//2. Wyczekuje na gotowość wszystkich turystów
 	for (int i = 0; i < liczba_w_grupie; i++) {
 		if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, id_przewodnik, 0) == -1){
 			perror("msgrcv failed");
 		}
 	}
-    printf("[Przewodnik %d]: Wszyscy zeszli z wieży, możemy w takim wypadku iść dalej.\n", id_przewodnik);
+    printf("[%d][Przewodnik %d]: Wszyscy zeszli z wieży, możemy w takim wypadku iść dalej.\n",typ_trasy, id_przewodnik);
 	
 	// Zwolnienie segmentu pamięci współdzielonej
 	shmdt(shm_ptr);
@@ -194,10 +194,14 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 	sleep(1);
 	
 	// Ustawiamy stronę promu
+	semafor_operacja(semid_turysta_wchodzenie, -1);
 	if(shm_ptr->prom_kierunek==0){
 		shm_ptr->prom_kierunek=typ_trasy;
-		printf("[%d][Przewodnik %d]: Prom znajduje się po naszej %d stronie\n",typ_trasy, id_przewodnik, shm_ptr->prom_kierunek);
+		printf("[%d][Przewodnik %d]: Prom znajduje się po naszej stronie: %d\n",typ_trasy, id_przewodnik, typ_trasy);
+	}else{
+		printf("[%d][Przewodnik %d]: Prom nie znajduje się po naszej stronie: %d\n",typ_trasy, id_przewodnik, typ_trasy);
 	}
+	semafor_operacja(semid_turysta_wchodzenie, 1);
 	prom_liczba = 0;
 // --- Pętla wykonuje się puki wszyscy nie przepłynęli
 
@@ -209,15 +213,11 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 		// Blokuje dostęp do wchodzenia wszystkim przewodnikom
 			semafor_operacja(semid_turysta_wchodzenie, -1); // Blokujemy dostęp do dalszej części programu dla reszty			
 			
-		// W wypadku gdy przejdzie przez semafor i typ trasy jest inny albo prom jest aktualnie niedostępny || MOŻNA POŁĄCZYĆ W JEDNO, NA POTRZEBY TESTOWANIA SĄ ROZDZIELONE
-			if(shm_ptr->prom_kierunek != typ_trasy){
+		// W wypadku gdy przejdzie przez semafor i typ trasy jest inny albo prom jest aktualnie niedostępny
+			if(shm_ptr->prom_kierunek != typ_trasy || shm_ptr->prom_odplynal==1){
 				semafor_operacja(semid_turysta_wchodzenie, 1);
 				continue;
-			}
-			if(shm_ptr->prom_odplynal==1){
-				semafor_operacja(semid_turysta_wchodzenie, 1);
-				continue;
-			}
+			}	
 		//1. Odczytuje komunikat OK od promu
 			if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_START_OFFSET, 0) == -1) {
 				perror("msgrcv failed");

@@ -30,6 +30,7 @@ int main() {
 	int l=0;
 	int wydluzenie=0;
 	int wydluzenie_prom=0;
+	shm_ptr->prom_zajete=0;
 	
 	if(shm_ptr->prom_istnieje==1){
 		printf("Prom już odpłynął\n");
