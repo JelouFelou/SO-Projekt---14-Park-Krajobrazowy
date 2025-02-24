@@ -17,6 +17,8 @@ void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_m
 void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy);
 void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie);
 
+int numer=0;
+
 int main() {
 	srand((unsigned)time(NULL) ^ (getpid() << 16));
 	struct komunikat kom;
@@ -122,7 +124,7 @@ int main() {
 			perror("msgrcv failed");
 		} else {
 			printf("[Turysta %d] odbiera %s\n", id_turysta, kom.mtext);
-			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d", &typ_trasy, &wiek, &id_przewodnik);
+			sscanf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d, jego numer to %d", &typ_trasy, &wiek, &id_przewodnik, &numer);
 		}
 		
 	// ---- Przewodnik ----
@@ -279,22 +281,42 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 		printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
 	}
 	
+	if(shm_ptr->wieza_sygnal[numer] == 1){
+		printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+		shm_ptr->liczba_osob_na_wiezy--;
+	}
+	
 	//Turysta na wieży
 	if(wiek>5){
 		sleep(czas);
 		printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
-		sleep(1);
-		printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
-		sleep(2);
-	// Turysta schodzi z wieży drugą klatką schodową
-		if(shm_ptr->wieza_sygnal == 1){
+		if(shm_ptr->wieza_sygnal[numer] == 1){
 			printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
 			shm_ptr->liczba_osob_na_wiezy--;
 		}else{
-			printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
-			sleep(czas);
-			printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
-			shm_ptr->liczba_osob_na_wiezy--;
+			sleep(1);
+			printf("[Turysta %d]: Podziwia widoki...\n", id_turysta);
+			if(shm_ptr->wieza_sygnal[numer] == 1){
+				printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+				shm_ptr->liczba_osob_na_wiezy--;
+			}else{
+				sleep(2);
+			// Turysta schodzi z wieży drugą klatką schodową
+				if(shm_ptr->wieza_sygnal[numer] == 1){
+					printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+					shm_ptr->liczba_osob_na_wiezy--;
+				}else{
+					printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
+					if(shm_ptr->wieza_sygnal[numer] == 1){
+						printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
+						shm_ptr->liczba_osob_na_wiezy--;
+					}else{
+						sleep(czas);
+						printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
+						shm_ptr->liczba_osob_na_wiezy--;
+					}
+				}
+			}
 		}
 	}
 	sleep(1);

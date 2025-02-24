@@ -7,6 +7,7 @@
 
 int prom_liczba = 0; // liczba turystów, którzy już weszli na prom
 int start_id = 0; // Liczba od której sprawdzamy czy dany turysta wszedł na prom
+int numer_wieza = 0;
 
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr);
 void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int prom_przewodnik, int start_id, int prom_liczba, SharedData *shm_ptr);
@@ -112,19 +113,20 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 
 
 // -------Wieża Widokowa-------
-void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie, int wydluzenie) {
+void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie, int wydluzenie, int numer) {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	struct komunikat kom;
 	
+	int numer_wieza = numer;
 	int i = 0;
 	float czas = rand() % 10 + 1;
 	if(wydluzenie==1){
 		czas *= 1.5;
 	}
-	
-	signal(SIGUSR4, handler_wieza_sygnal);
+	shm_ptr->wieza_sygnal[numer_wieza] = 0;
+	signal(SIGCHLD, handler_wieza_sygnal);
 	
 	//printf(GRN "\n-------Wieża Widokowa-------\n\n" RESET);
 	printf("[%d][Przewodnik %d]: Wejdźcie na wieże widokową, ja będę czekać na dole\n",typ_trasy, id_przewodnik);
@@ -297,9 +299,9 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom, int semid_turysta_wcho
 void handler_wieza_sygnal(int sig) {
     int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
-	printf(YEL"[Przewodnik]: Proszę wszystkich o zejście z wieży.\n"RESET);
-	shm_ptr->wieza_sygnal = 1;
-	sleep(5);
-	shm_ptr->wieza_sygnal = 0;
+	
+	int id_przewodnik = getpid();
+	printf(YEL"[Przewodnik %d]: Proszę wszystkich o zejście z wieży.\n"RESET, id_przewodnik);
+	shm_ptr->wieza_sygnal[numer_wieza] = 1;
 }
 #endif

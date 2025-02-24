@@ -22,6 +22,7 @@ int main() {
 	int id_turysta = 0;
 	int typ_trasy = 0;
 	int wiek = 0;
+	int numer = 0;
 	
 	int IDkolejki;
 	key_t key_kolejka;
@@ -105,11 +106,11 @@ int main() {
 			} else {
 				if (strncmp(kom.mtext, "OK", 2) == 0) {
 					printf("[Kasjer %d] Otrzymał potwierdzenie od przewodnika dla turysty %d!\n", id_kasjer, id_turysta);
-					sscanf(kom.mtext, "OK %d", &id_przewodnik);
+					sscanf(kom.mtext, "OK %d %d", &id_przewodnik, &numer);
 					
 				//4. Przekazanie biletu
 					kom.mtype = id_turysta;
-					sprintf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d", typ_trasy, wiek, id_przewodnik);
+					sprintf(kom.mtext, "bilet na trasę %d dla osoby z wiekiem %d. Ma pójść do przewodnika %d, jego numer to %d", typ_trasy, wiek, id_przewodnik, numer);
 					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 			
 					printf("[Kasjer %d] Przekazuje turyście %d bilet na trasę %d\n", id_kasjer, id_turysta, typ_trasy);
@@ -162,6 +163,7 @@ void przedwczesne_wyjscie(int sig){
 	//Przewodnik
 	shm_ptr->turysci_w_grupie=0;
 	shm_ptr->ilosc_przewodnikow=0;
+	shm_ptr->nr_przewodnika=1;
 	
 	// Most
 	shm_ptr->liczba_osob_na_moscie=0;
@@ -171,7 +173,9 @@ void przedwczesne_wyjscie(int sig){
 	
 	// Wieża
 	shm_ptr->liczba_osob_na_wiezy=0;
-	shm_ptr->wieza_sygnal=0;
+	for(int i=0; i<P; i++){
+		shm_ptr->wieza_sygnal[i]=0;
+	}
 	
 	// Prom
 	shm_ptr->turysci_trasa_1=0;

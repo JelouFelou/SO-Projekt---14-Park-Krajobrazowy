@@ -89,6 +89,7 @@ typedef struct {
 	//Przewodnik
 	int turysci_w_grupie;
 	int ilosc_przewodnikow;
+	int nr_przewodnika;
 	
 	// Most
 	int liczba_osob_na_moscie;
@@ -98,7 +99,7 @@ typedef struct {
 	
 	// Wieża
 	int liczba_osob_na_wiezy;
-	int wieza_sygnal;
+	int wieza_sygnal[P];
 	
 	// Prom
 	int turysci_trasa_1;
@@ -141,6 +142,7 @@ SharedData* shm_init(int* shm_id){
 		//Przewodnik
 		shm_ptr->turysci_w_grupie=0;
 		shm_ptr->ilosc_przewodnikow=0;
+		shm_ptr->nr_przewodnika=1;
 	
 		// Most
 		shm_ptr->liczba_osob_na_moscie=0;
@@ -150,7 +152,9 @@ SharedData* shm_init(int* shm_id){
 	
 		// Wieża
 		shm_ptr->liczba_osob_na_wiezy=0;
-		shm_ptr->wieza_sygnal=0;
+		for(int i=0; i<P; i++){
+			shm_ptr->wieza_sygnal[i]=0;
+		}
 	
 		// Prom
 		shm_ptr->turysci_trasa_1=0;

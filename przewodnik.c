@@ -20,7 +20,7 @@ int grupa[M];
 int wiek_turysty[M];
 int liczba_w_grupie=0;
 int IDkolejki;
-int semid_most, semid_wieza, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, semid_most_wchodzenie;
+int semid_most, semid_wieza, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, semid_most_wchodzenie, semid_przewodnik;
 int wymuszony_start=0;
 int przypisana_trasa=0;
 
@@ -59,9 +59,6 @@ int main() {
 	int wydluzenie=0;
 	float czas_trasa=0;
 	
-	// Klucze do kolejki i semaforów								 
-	key_t key_kolejka;
-	key_t key_most, key_wieza, key_prom;
 	
 	if(shm_ptr->przewodnik_istnieje==0){
 		shm_ptr->przewodnik_istnieje=1;
@@ -69,24 +66,29 @@ int main() {
 	}
 	
 	// Pobieranie ID kolejki komunikatów
-	key_kolejka = ftok(".", 99);
+	key_t key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
         exit(1);
     }
+	key_t key_przewodnik = ftok(".", 100);
+    if ((semid_przewodnik = semget(key_przewodnik, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora mostu");
+		exit(1);
+	}
 	
 	// Odpowiedzialne za kontrolę dostępu do atrakcji przez innych przewodników
-	key_most = ftok(".", 200);
+	key_t key_most = ftok(".", 200);
 	if ((semid_most = semget(key_most, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora mostu");
 		exit(1);
 	}
-	key_wieza = ftok(".", 201);
+	key_t key_wieza = ftok(".", 201);
 	if ((semid_wieza = semget(key_wieza, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora wieży");
 		exit(1);
 	}
-	key_prom = ftok(".", 202);
+	key_t key_prom = ftok(".", 202);
 	if ((semid_prom = semget(key_prom, 1, IPC_CREAT | 0600)) == -1) {
 		perror("Błąd przy tworzeniu semafora promu");
 		exit(1);
@@ -108,8 +110,6 @@ int main() {
 	}
 	
 	
-	
-	
 	// Inicjalizacja semaforów
 	union semun arg;					
 	arg.val = 0;
@@ -120,6 +120,7 @@ int main() {
 	arg.val = 1;
 		semctl(semid_turysta_wchodzenie, 0, SETVAL, arg);
 		semctl(semid_most_wchodzenie, 0, SETVAL, arg);
+		semctl(semid_przewodnik, 0, SETVAL, arg);
 		
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
@@ -128,6 +129,10 @@ int main() {
 	signal(SIGTERM,przedwczesne_wyjscie);
 	signal(SIGUSR2,wyjscie_prom);
 
+	semafor_operacja(semid_przewodnik, -1);
+	int numer=shm_ptr->nr_przewodnika;
+	shm_ptr->nr_przewodnika++;
+	semafor_operacja(semid_przewodnik, 1);
 
 // ---- Pętla przewodnika ----
     while (1) {
@@ -168,7 +173,7 @@ int main() {
 				sleep(czas_trasa);
 				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie);
 				sleep(czas_trasa);
-				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer);
 				sleep(czas_trasa);
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
 				sleep(czas_trasa);
@@ -179,7 +184,7 @@ int main() {
 				sleep(czas_trasa);
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
 				sleep(czas_trasa);
-				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie);
+				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer);
 				sleep(czas_trasa);
 				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie);
 				sleep(czas_trasa);
@@ -256,7 +261,7 @@ int main() {
 				continue;
 			} else if (typ_trasy == przypisana_trasa) {
 				kom.mtype = id_kasjer;
-				sprintf(kom.mtext, "OK %d", id_przewodnik);
+				sprintf(kom.mtext, "OK %d %d", id_przewodnik, numer);
 				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 				
 				odbiera = 1;
