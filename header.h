@@ -13,10 +13,9 @@
 #define X1 5   // Maksymalna liczba osób na moście (X1<M)
 #define X2 18   // Maksymalna liczba osób na wieży (X2<2M)
 #define X3 14   // Maksymalna liczba osób na promie (X3<1.5*M)
+#define KLATKA 6 // Maksymalna liczba osób na klatce na wieży
 
-#define TMOST 5 // określony czas pokonania mostu
-#define TWIEZA 5 // określony czas pokonania wiezy
-#define TPROM 5 // określony czas pokonania rzeki
+#define TK 17  // Park zamyka się o 17:00
 
 #define MAX 256 // maksymalna długość wiadomości
 #define KASJER 1  // typ komunikatu do kasjera
@@ -85,6 +84,7 @@ typedef struct {
 	
 	// Turysta
 	int liczba_turystow;
+	int turysta_opuszcza_park
 	
 	//Przewodnik
 	int turysci_w_grupie;
@@ -99,6 +99,8 @@ typedef struct {
 	
 	// Wieża
 	int liczba_osob_na_wiezy;
+	int pierwsza_klatka;
+	int druga_klatka;
 	int wieza_sygnal[P];
 	
 	// Prom
@@ -113,6 +115,7 @@ typedef struct {
 	int przewodnik_istnieje;
 	int turysta_istnieje;
 	int kasjer_istnieje;
+	int kasjer_glowny;
 } SharedData;
 
 
@@ -138,6 +141,7 @@ SharedData* shm_init(int* shm_id){
 		
 		// Turysta
 		shm_ptr->liczba_turystow=0;
+		shm_ptr->turysta_opuszcza_park=0;
 	
 		//Przewodnik
 		shm_ptr->turysci_w_grupie=0;
@@ -152,6 +156,8 @@ SharedData* shm_init(int* shm_id){
 	
 		// Wieża
 		shm_ptr->liczba_osob_na_wiezy=0;
+		shm_ptr->pierwsza_klatka=0;
+		shm_ptr->druga_klatka=0;
 		for(int i=0; i<P; i++){
 			shm_ptr->wieza_sygnal[i]=0;
 		}
@@ -168,6 +174,7 @@ SharedData* shm_init(int* shm_id){
 		shm_ptr->przewodnik_istnieje=0;
 		shm_ptr->turysta_istnieje=0;
 		shm_ptr->kasjer_istnieje=0;
+		shm_ptr->kasjer_glowny=0;
 	}
 	return shm_ptr;
 }

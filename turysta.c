@@ -18,12 +18,12 @@ void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy);
 void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie);
 
 int numer=0;
+int semid_most_wchodzenie, semid_most, semid_turysta_wchodzenie, semid_klatka_pierwsza, semid_klatka_druga, semid_wejscie_do_parku;
 
 int main() {
 	srand((unsigned)time(NULL) ^ (getpid() << 16));
 	struct komunikat kom;
 	int IDkolejki;
-	int semid_most_wchodzenie, semid_most, semid_turysta_wchodzenie;
 	
 	int id_turysta = getpid();
 	int id_przewodnik = 0;
@@ -39,6 +39,8 @@ int main() {
 		else if (!czy_istnieje(id_turysta)) continue;
 		else break;
 	}
+	
+	
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
@@ -67,6 +69,11 @@ int main() {
 	}
 
     // Pobieranie ID kolejki komunikatów
+	key_t key_wejscie_do_parku = ftok(".", 98);
+	if ((semid_wejscie_do_parku = semget(key_wejscie_do_parku, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora wejscia");
+		exit(1);
+	}
 	key_t key_kolejka = ftok(".", 99);
     if ((IDkolejki = msgget(key_kolejka, IPC_CREAT | 0600)) == -1) {
         perror("msgget() błąd");
@@ -89,7 +96,28 @@ int main() {
 		perror("Błąd przy tworzeniu semafora most_wchodzenie");
 		exit(1);
 	}
+	key_t key_klatka_pierwsza = ftok(".", 206);
+	if ((semid_klatka_pierwsza = semget(key_klatka_pierwsza, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora klatka_pierwsza");
+		exit(1);
+	}
+	key_t key_klatka_druga = ftok(".", 207);
+	if ((semid_klatka_druga = semget(key_klatka_druga, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora klatka_druga");
+		exit(1);
+	}
 	
+	union semun arg;
+	arg.val = KLATKA;
+		semctl(semid_klatka_pierwsza, 0, SETVAL, arg);
+		semctl(semid_klatka_druga, 0, SETVAL, arg);
+	arg.val = 3;
+		semctl(semid_wejscie_do_parku, 0, SETVAL, arg);
+	
+	int wejscie = (rand() % 15) + 1;
+	semafor_operacja(semid_wejscie_do_parku, -1);
+	sleep(wejscie);
+	semafor_operacja(semid_wejscie_do_parku, 1);
 
 // Początek symulacji turysty
 	printf(">>> Do parku wchodzi [Turysta %d]\n", id_turysta);
@@ -207,6 +235,7 @@ int main() {
 	}
     printf("[Turysta %d] opuszcza park po zakończeniu trasy\n", id_turysta);
 	
+	shm_ptr->turysta_opuszcza_park++;
 	shmdt(shm_ptr);
     return 0;
 }
@@ -278,17 +307,20 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	}else if(wiek<15){
 		printf("[Turysta %d]: Wchodzę na wieżę pod opieką osoby dorosłej...\n", id_turysta);
 	}else{
+		semafor_operacja(semid_klatka_pierwsza, -1);
 		printf("[Turysta %d]: Wchodzę na wieżę...\n", id_turysta);
 	}
 	
 	if(shm_ptr->wieza_sygnal[numer] == 1){
 		printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
 		shm_ptr->liczba_osob_na_wiezy--;
+		semafor_operacja(semid_klatka_pierwsza, 1);
 	}
 	
 	//Turysta na wieży
 	if(wiek>5){
 		sleep(czas);
+		semafor_operacja(semid_klatka_pierwsza, 1);
 		printf("[Turysta %d]: Wszedłem na wieżę...\n", id_turysta);
 		if(shm_ptr->wieza_sygnal[numer] == 1){
 			printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
@@ -306,13 +338,16 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 					printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
 					shm_ptr->liczba_osob_na_wiezy--;
 				}else{
+					semafor_operacja(semid_klatka_druga, -1);
 					printf("[Turysta %d]: Zchodzi z wieży...\n", id_turysta);
 					if(shm_ptr->wieza_sygnal[numer] == 1){
 						printf("[Turysta %d]: Natychmiastowo schodzi z wieży...\n", id_turysta);
 						shm_ptr->liczba_osob_na_wiezy--;
+						semafor_operacja(semid_klatka_druga, 1);
 					}else{
 						sleep(czas);
 						printf("[Turysta %d]: Zszedł z wieży i czeka na resztę...\n", id_turysta);
+						semafor_operacja(semid_klatka_druga, 1);
 						shm_ptr->liczba_osob_na_wiezy--;
 					}
 				}
@@ -434,9 +469,9 @@ void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy){
 	
 	printf("[VIP | %d][Turysta %d]: Widzę wieże...\n",typ_trasy, id_turysta);
 	sleep(1);
-	/*while(1){
+	while(1){
 		if(shm_ptr->liczba_osob_na_wiezy <= X2){
-			shm_ptr->liczba_osob_na_wiezy++;*/
+			shm_ptr->liczba_osob_na_wiezy++;
 			printf("[VIP | %d][Turysta %d]: Wchodzę na wieżę...\n",typ_trasy, id_turysta);
 			sleep(czas);
 			printf("[VIP | %d][Turysta %d]: Wszedłem na wieżę...\n",typ_trasy, id_turysta);
@@ -446,14 +481,14 @@ void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy){
 			printf("[VIP | %d][Turysta %d]: Zchodzi z wieży...\n",typ_trasy, id_turysta);
 			sleep(czas);
 			printf("[VIP | %d][Turysta %d]: Zszedł z wieży...\n",typ_trasy, id_turysta);
-			/*shm_ptr->liczba_osob_na_wiezy--;
+			shm_ptr->liczba_osob_na_wiezy--;
 			break;
 		}else{
 			printf("[VIP | %d][Turysta %d]: Wieża pełna (obecnie: %d osób). Czekam na zwolnienie miejsca...\n",typ_trasy,id_turysta, shm_ptr->liczba_osob_na_wiezy);
 			sleep(5);
 			continue;
 		}
-	}*/
+	}
 	
 	sleep(1);
 	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);

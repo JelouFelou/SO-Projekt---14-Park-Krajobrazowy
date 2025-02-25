@@ -215,7 +215,13 @@ void przedwczesne_wyjscie(int sig_n){
     SharedData *shm_ptr = shm_init(&shm_id);
 	int id_prom = getpid();
 	
-	printf("\n[Prom %d] Odpływa żeby przejść prace konserwacyjne, ale pierwsze przewozi turystów na drugą stronę\n",id_prom);
+	if(shm_ptr->kasjer_glowny==2){
+		printf("\n[Prom %d] opuszcza park po całym dniu ciężkiej pracy\n", id_prom);
+	}else{
+		printf("\n[Prom %d] Odpływa żeby przejść prace konserwacyjne, ale pierwsze przewozi turystów na drugą stronę\n",id_prom);
+	}
+	
+	
 	shm_ptr->prom_istnieje=0;
 	// Wysiadają turyści
 	for (int i=0;i<X3;i++){

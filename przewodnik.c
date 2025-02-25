@@ -322,7 +322,13 @@ void rozpoczecie_wycieczki(int sig_n){
 
 void przedwczesne_wyjscie(int sig_n){
 	int id_przewodnik = getpid();
-	printf("[Przewodnik %d]: przedwcześnie opuszcza park\n", id_przewodnik);
+	
+	if(shm_ptr->kasjer_glowny==2){
+		printf("[Przewodnik %d] opuszcza park po całym dniu ciężkiej pracy\n", id_przewodnik);
+	}else{
+		printf("[Przewodnik %d] przedwcześnie opuszcza park\n", id_przewodnik);
+	}
+	
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
