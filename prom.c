@@ -30,6 +30,7 @@ int main() {
 	int l=0;
 	int wydluzenie=0;
 	int wydluzenie_prom=0;
+	int przewodnik_ok=0;
 	shm_ptr->prom_zajete=0;
 	
 	if(shm_ptr->prom_istnieje==1){
@@ -74,6 +75,15 @@ int main() {
 			wyczekuje=0;
 		}
 		
+		if((shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_2 > 0 && shm_ptr->turysci_trasa_1 == 0) || (shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_1 > 0 && shm_ptr->turysci_trasa_2 == 0)){
+			shm_ptr->prom_odplynal=1;
+			printf(BLU"[%d][Prom %d] Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+			sleep(5);
+			shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
+			printf(BLU"[%d][Prom %d] Dopłynął na stronę %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
+			shm_ptr->prom_odplynal=0;
+		}
+		
 // --- Wycieczka
 		if (shm_ptr->prom_zajete == X3 || 
 		(shm_ptr->turysci_trasa_1 == 0 && shm_ptr->turysci_trasa_2 == 0 && shm_ptr->prom_zajete > 0) || 
@@ -111,8 +121,9 @@ int main() {
 					kom.mtype = PROM + grupa_turysci[i] + PROM_EXIT_OFFSET;
 					sprintf(kom.mtext, "PROM");
 					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
-					printf("[%d][Prom %d] Turysta %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3);
+					printf("[%d][Prom %d] Turysta %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, grupa_turysci[i], shm_ptr->prom_zajete, X3);
 				}
+				
 				grupa_turysci[i]=0;
 				sleep(1);
 			}
@@ -141,9 +152,13 @@ int main() {
 		
 // --- Wsiadanie turystów na prom
 	//1. Wysyłamy komunikat do przewodnika o gotowości do przyjmowania nastęnej osoby
-		kom.mtype = PROM + PROM_START_OFFSET;
-		sprintf(kom.mtext, "OK");
-		msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+		if(przewodnik_ok==0){
+			kom.mtype = PROM + PROM_START_OFFSET;
+			sprintf(kom.mtext, "OK");
+			msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+			przewodnik_ok=1;
+		}
+		
 		if(shm_ptr->prom_zajete == X3 || 
 		(shm_ptr->turysci_trasa_1 == 0 && shm_ptr->turysci_trasa_2 == 0 && shm_ptr->prom_zajete > 0) || 
 		(shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_1 == 0 && shm_ptr->prom_zajete > 0) || 
@@ -153,17 +168,21 @@ int main() {
 		//printf("Wysyła komunikat OK.1\n");
 		
 	//2. Wyczekujemy na komunikat zwrotny
-        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_ENTER_OFFSET, 0) == -1) {
-			perror("msgrcv failed");
-			continue;
-		}
-		
-	//2.1. Sprawdzamy, czy wiadomość zaczyna się od "[Przewodnik"
-		if (strncmp(kom.mtext, "[Przewodnik", 11) == 0) {
+        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, PROM + PROM_ENTER_OFFSET, IPC_NOWAIT) == -1) {
+			if (errno == ENOMSG) {
+				continue;
+			} else {
+				perror("msgrcv failed");
+				continue;
+			}	
+		}else{
+			przewodnik_ok=0;
+		//2.1. Sprawdzamy, czy wiadomość zaczyna się od "[Przewodnik"
+			if (strncmp(kom.mtext, "[Przewodnik", 11) == 0) {
 			if (sscanf(kom.mtext, "[Przewodnik %d] chce wejść na prom", &id_przewodnik) == 1) {
 				if (!czy_istnieje(id_przewodnik)) continue;
 				shm_ptr->prom_zajete++;
-				printf("[%d][Prom %d] Zaprasza przewodnika %d na prom (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_przewodnik, shm_ptr->prom_zajete, X3);
+				printf("[%d][Prom %d] Zaprasza przewodnika %d na prom (%d/%d) (1:%d 2:%d)\n",shm_ptr->prom_kierunek, id_prom, id_przewodnik, shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2);
 			// Wysyłanie potwierdzenia do przewodnika
 				kom.mtype = PROM + PROM_WELCOME_OFFSET;
 				sprintf(kom.mtext, "WELCOME");
@@ -180,15 +199,15 @@ int main() {
 				continue;
 			}
 		} 
-	//2.1. Sprawdzamy, czy wiadomość zaczyna się od "[Turysta"
-		else if (strncmp(kom.mtext, "[Turysta", 8) == 0) {
+		//2.1. Sprawdzamy, czy wiadomość zaczyna się od "[Turysta"
+			else if (strncmp(kom.mtext, "[Turysta", 8) == 0) {
 			if (sscanf(kom.mtext, "[Turysta %d] chce wejść na prom %d", &id_turysta, &wydluzenie) == 2) {
 				if (!czy_istnieje(id_turysta)) continue;
 				if (wydluzenie) wydluzenie_prom=1;
 				
 				shm_ptr->prom_zajete++;
 				LiczbaTurysciTrasy(shm_ptr->prom_kierunek, shm_ptr); // Zmniejsza liczbę osób danej strony o 1
-				printf("[%d][Prom %d] Zaprasza turystę %d na prom (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3);
+				printf("[%d][Prom %d] Zaprasza turystę %d na prom (%d/%d) (1:%d 2:%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2);
 			// Wysyłanie potwierdzenia do przewodnika
 				kom.mtype = PROM + PROM_WELCOME_OFFSET;
 				sprintf(kom.mtext, "WELCOME");
@@ -202,10 +221,11 @@ int main() {
 				continue;
 			}
 		}
-	// Jeżeli otrzymana wiadomość nie zgadza się z żadnymi wytycznymi
-		else {
-			fprintf(stderr, "Nieznany format wiadomości: %s\n", kom.mtext);
-			continue;
+		// Jeżeli otrzymana wiadomość nie zgadza się z żadnymi wytycznymi
+			else {
+				fprintf(stderr, "Nieznany format wiadomości: %s\n", kom.mtext);
+				continue;
+			}
 		}
 	}
 }

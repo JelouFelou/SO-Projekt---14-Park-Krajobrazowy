@@ -20,7 +20,7 @@ int grupa[M];
 int wiek_turysty[M];
 int liczba_w_grupie=0;
 int IDkolejki;
-int semid_most, semid_wieza, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, semid_most_wchodzenie, semid_przewodnik;
+int semid_most, semid_wieza, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, semid_most_wchodzenie, semid_przewodnik, semid_prom_check;
 int wymuszony_start=0;
 int przypisana_trasa=0;
 
@@ -58,6 +58,7 @@ int main() {
 	int odbiera = 1;
 	int wydluzenie=0;
 	float czas_trasa=0;
+	int opiekun=0;
 	
 	
 	if(shm_ptr->przewodnik_istnieje==0){
@@ -108,6 +109,11 @@ int main() {
 		perror("Błąd przy tworzeniu semafora most_wchodzenie");
 		exit(1);
 	}
+	key_t key_prom_check = ftok(".", 208);
+	if ((semid_prom_check = semget(key_prom_check, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora most_wchodzenie");
+		exit(1);
+	}
 	
 	
 	// Inicjalizacja semaforów
@@ -121,6 +127,7 @@ int main() {
 		semctl(semid_turysta_wchodzenie, 0, SETVAL, arg);
 		semctl(semid_most_wchodzenie, 0, SETVAL, arg);
 		semctl(semid_przewodnik, 0, SETVAL, arg);
+		semctl(semid_prom_check, 0, SETVAL, arg);
 		
 	
 	// Po nacisnieciu przez uzytkownika CTRL+C wywoluje sie funkcja awaryjne_wyjscie()
@@ -147,11 +154,25 @@ int main() {
 			wymuszony_start=0;
             printf(GRN"\n[%d][Przewodnik %d]: \"Grupa zapełniona (%d osób)! Oprowadzę was po trasie %d\"\n"RESET,przypisana_trasa, id_przewodnik, liczba_w_grupie, typ_trasy);
             sleep(1);
+			
+			for (int i = 0; i < liczba_w_grupie; i++) {
+				if(wiek_turysty[i]<18){
+					opiekun=1;
+					break;
+				}
+			}
 
 			for (int i = 0; i < liczba_w_grupie; i++) {
-				kom.mtype = grupa[i];
-				sprintf(kom.mtext, "OK");
-				msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+				if(opiekun==1 && wiek_turysty[i]>18){ // w grupie jest tylko 1 opiekun dla wszystkich nieletnich
+					opiekun=grupa[i];
+					kom.mtype = grupa[i];
+					sprintf(kom.mtext, "OK %d",1);
+					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+				}else{
+					kom.mtype = grupa[i];
+					sprintf(kom.mtext, "OK %d",0);
+					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
+				}
 			}
 			for (int j = 0; j < liczba_w_grupie; j++){
 				if(wiek_turysty[j]<12){
@@ -175,14 +196,14 @@ int main() {
 				sleep(czas_trasa);
 				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer);
 				sleep(czas_trasa);
-				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom_check, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
 				sleep(czas_trasa);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
 				break;
 			case 2:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(czas_trasa);
-				TrasaC(IDkolejki, przypisana_trasa, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
+				TrasaC(IDkolejki, przypisana_trasa, semid_prom_check, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty);
 				sleep(czas_trasa);
 				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer);
 				sleep(czas_trasa);
@@ -215,6 +236,7 @@ int main() {
 			wyczekuje = 1;
 			wydluzenie = 0;
 			czas_trasa = 0;
+			opiekun = 0;
 			printf("\n");
         }
 		
@@ -321,16 +343,16 @@ void rozpoczecie_wycieczki(int sig_n){
 }
 
 void przedwczesne_wyjscie(int sig_n){
-	int id_przewodnik = getpid();
+	int shm_id;
+    SharedData *shm_ptr = shm_init(&shm_id);
 	
+	int id_przewodnik = getpid();
 	if(shm_ptr->kasjer_glowny==2){
 		printf("[Przewodnik %d] opuszcza park po całym dniu ciężkiej pracy\n", id_przewodnik);
 	}else{
 		printf("[Przewodnik %d] przedwcześnie opuszcza park\n", id_przewodnik);
 	}
 	
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
 	shm_ptr->ilosc_przewodnikow--;
 	for (int i = 0; i < liczba_w_grupie; i++){
 		kill(grupa[i], SIGTERM);

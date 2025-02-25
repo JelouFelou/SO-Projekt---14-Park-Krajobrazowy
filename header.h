@@ -10,7 +10,7 @@
 #define N 10000 // maksymalna ilość osób w parku w ciągu dnia
 #define M 10 // wielkość grupy odprowadzanej przez przewodnika
 #define P 10 // liczba przewodników
-#define X1 5   // Maksymalna liczba osób na moście (X1<M)
+#define X1 9   // Maksymalna liczba osób na moście (X1<M)
 #define X2 18   // Maksymalna liczba osób na wieży (X2<2M)
 #define X3 14   // Maksymalna liczba osób na promie (X3<1.5*M)
 #define KLATKA 6 // Maksymalna liczba osób na klatce na wieży
@@ -50,7 +50,11 @@ union semun {
 // Wykonuje operacje na semaforze, zmieniając jego wartość o 'zmiana'
 void semafor_operacja(int semid, int zmiana) {
     struct sembuf operacja = {0, zmiana, 0};
-    if (semop(semid, &operacja, 1) == -1) {
+    while (semop(semid, &operacja, 1) == -1) {
+        if (errno == EINTR) {
+            // Operacja została przerwana przez sygnał, powtarzamy próbę
+            continue;
+        }
         perror("Błąd semop");
         exit(1);
     }
@@ -84,7 +88,7 @@ typedef struct {
 	
 	// Turysta
 	int liczba_turystow;
-	int turysta_opuszcza_park
+	int turysta_opuszcza_park;
 	
 	//Przewodnik
 	int turysci_w_grupie;

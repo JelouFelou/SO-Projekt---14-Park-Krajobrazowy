@@ -88,7 +88,7 @@ int main() {
 		}
 		
 		//1. Pobranie turysty z kolejki
-        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, KASJER, 0) == -1) {
+        if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, KASJER, IPC_NOWAIT) == -1) {
 			if (errno == ENOMSG) {
 				//
 			} else {
@@ -99,7 +99,7 @@ int main() {
 			if (!czy_istnieje(id_turysta)) continue;
 			printf("[Kasjer %d] Zaprasza następnego turystę %d do kasy\n", id_kasjer, id_turysta);
 		
-		time_t now = time(NULL);
+		//time_t now = time(NULL);
 		
 
 		//2. Wywołanie turysty do kasy – wyciągamy PID turysty z komunikatu
