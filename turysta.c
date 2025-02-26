@@ -246,7 +246,9 @@ int main() {
 	}
     printf("[Turysta %d] opuszcza park po zakończeniu trasy\n", id_turysta);
 	
+	
 	shm_ptr->turysta_opuszcza_park++;
+	printf("%d/%d",shm_ptr->turysta_opuszcza_park,shm_ptr->liczba_turystow);
 	shmdt(shm_ptr);
     return 0;
 }

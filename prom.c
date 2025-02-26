@@ -14,7 +14,7 @@ void przedwczesne_wyjscie(int);
 
 struct komunikat kom;
 int id_przewodnik, id_turysta;
-int IDkolejki, semid_prom, semid_czekajaca_grupa;
+int IDkolejki, semid_prom, semid_czekajaca_grupa, semid_prom_check;
 int grupa_przewodnicy[P], grupa_turysci[X3];
 	
 int to_przewodnik=0;
@@ -57,6 +57,11 @@ int main() {
 		perror("Błąd przy tworzeniu semafora turysta_wchodzenie");
 		exit(1);
 	}
+	key_t key_prom_check = ftok(".", 208);
+	if ((semid_prom_check = semget(key_prom_check, 1, IPC_CREAT | 0600)) == -1) {
+		perror("Błąd przy tworzeniu semafora most_wchodzenie");
+		exit(1);
+	}
 	
 	// Inicjalizacja semaforów
 	union semun arg;					
@@ -77,6 +82,7 @@ int main() {
 		
 		if((shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_2 > 0 && shm_ptr->turysci_trasa_1 == 0) || (shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_1 > 0 && shm_ptr->turysci_trasa_2 == 0)){
 			shm_ptr->prom_odplynal=1;
+			printf(YEL"[%d][Prom %d] Otrzymałem informację, że po drugiej stronie znajdują się turyści2: %d\n"RESET,shm_ptr->prom_kierunek, id_prom, shm_ptr->turysci_trasa_1);
 			printf(BLU"[%d][Prom %d] Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
 			sleep(5);
 			shm_ptr->prom_kierunek = (shm_ptr->prom_kierunek == 1) ? 2 : 1;
@@ -111,7 +117,9 @@ int main() {
 				for(int j=0;j<P;j++){
 					if(grupa_przewodnicy[j]==grupa_turysci[i]){
 						printf("[%d][Prom %d] Przewodnik %d wysiada z promu (%d/%d)\n",shm_ptr->prom_kierunek, id_prom, id_przewodnik, shm_ptr->prom_zajete, X3);
-						kill(grupa_przewodnicy[j], SIGUSR2);
+						/*kom.mtype = PROM + grupa_przewodnicy[j] + PROM_EXIT_OFFSET;
+						sprintf(kom.mtext, "PROM");
+						msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);*/
 						grupa_przewodnicy[j]=0;
 						to_przewodnik=1;
 						break;
@@ -206,7 +214,9 @@ int main() {
 				if (wydluzenie) wydluzenie_prom=1;
 				
 				shm_ptr->prom_zajete++;
+				semafor_operacja(semid_prom_check, -1);
 				LiczbaTurysciTrasy(shm_ptr->prom_kierunek, shm_ptr); // Zmniejsza liczbę osób danej strony o 1
+				semafor_operacja(semid_prom_check, 1);
 				printf("[%d][Prom %d] Zaprasza turystę %d na prom (%d/%d) (1:%d 2:%d)\n",shm_ptr->prom_kierunek, id_prom, id_turysta, shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2);
 			// Wysyłanie potwierdzenia do przewodnika
 				kom.mtype = PROM + PROM_WELCOME_OFFSET;

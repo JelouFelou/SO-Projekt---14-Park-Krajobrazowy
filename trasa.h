@@ -9,7 +9,6 @@ int prom_liczba = 0; // liczba turystów, którzy już weszli na prom
 int start_id = 0; // Liczba od której sprawdzamy czy dany turysta wszedł na prom
 int numer_wieza = 0;
 
-void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr);
 void PrzeplywPromem(int IDkolejki, int typ_trasy, int id_przewodnik, int grupa[], int semid_prom, int prom_przewodnik, int start_id, int prom_liczba, SharedData *shm_ptr);
 void handler_wieza_sygnal(int);
 
@@ -59,7 +58,7 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 			shm_ptr->liczba_osob_na_moscie--;
 			most_przewodnik=1;
 		}else if(most_przewodnik == 0 && shm_ptr->liczba_osob_na_moscie >= (X1-1)) {
-			printf("[%d][Przewodnik %d]: Most pełny (obecnie: %d osób). Czekamy na zwolnienie miejsca...\n",typ_trasy,id_przewodnik, shm_ptr->liczba_osob_na_moscie);
+			printf("[%d][Przewodnik %d]: Most pełny (obecnie: %d osób). Czekamy na zwolnienie miejsca...\n",typ_trasy,id_przewodnik, shm_ptr->liczba_osob_na_moscie-1);
 			sleep(2);
 			continue;
 		}
@@ -204,8 +203,8 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 	}else if(typ_trasy==2){
 		shm_ptr->turysci_trasa_2 += liczba_w_grupie;
 	}
-	
 	semafor_operacja(semid_prom_check, 1);
+	
 	prom_liczba = 0;
 // --- Pętla wykonuje się puki wszyscy nie przepłynęli
 
@@ -227,7 +226,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 				perror("msgrcv failed");
 			}
 			
-		//2.1. Przewodnik	
+		//2.1. Przewodnik
 			if(prom_przewodnik == 0 && shm_ptr->prom_zajete < X3 && shm_ptr->prom_kierunek == typ_trasy){
 				prom_przewodnik=1;
 				kom.mtype = PROM + PROM_ENTER_OFFSET;
@@ -264,7 +263,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 				
 					sleep(1);
-					printf("[%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d/%d) (1:%d 2:%d) (%d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, prom_liczba);
+					printf("[%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d/%d) (1:%d 2:%d) (stan danej grupy: %d/%d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, prom_liczba+1, liczba_w_grupie);
 					prom_liczba++;
 					semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
 				}
@@ -277,7 +276,9 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 				break;
 			}
 		}
+		printf("główne while: %d\n", id_przewodnik);
     }
+
 	
 // --- Wszyscy przepłynęli na drugą stronę	
 	//3. Wyczekuje na gotowość wszystkich turystów

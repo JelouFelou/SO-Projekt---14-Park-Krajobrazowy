@@ -141,6 +141,7 @@ SharedData* shm_init(int* shm_id){
     }	
 	
 	if(shm_ptr->init != 1){
+		printf(RED"\n\n---------WYZEROWYWANIE UWAGA------------\n\n"RESET);
 		shm_ptr->init = 1;
 		
 		// Turysta
