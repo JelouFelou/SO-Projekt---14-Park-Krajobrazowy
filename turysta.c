@@ -15,7 +15,7 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
 void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
 void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most);
 void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy);
-void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie);
+void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie, int semid_prom_check);
 
 int numer=0;
 int wiek = 0;
