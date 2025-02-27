@@ -185,31 +185,31 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 	
 	
 	//printf(BLU "\n-------Płynięcie promem-------\n\n" RESET);
-	printf("[%d][Przewodnik %d]: Sprawdzam stan promu...\n",typ_trasy, id_przewodnik);
+	printf("%d [%d][Przewodnik %d]: Sprawdzam stan promu...\n",(int)time(NULL),typ_trasy, id_przewodnik);
 	sleep(1);
 	
 	// Ustawiamy stronę promu
 	semafor_operacja(semid_prom_check, -1);
 	if(shm_ptr->prom_kierunek==0){
 		shm_ptr->prom_kierunek=typ_trasy;
-		printf("[%d][Przewodnik %d]: Prom znajduje się po naszej stronie: %d\n",typ_trasy, id_przewodnik, typ_trasy);
+		printf("%d [%d][Przewodnik %d]: Prom znajduje się po naszej stronie: %d\n",(int)time(NULL),typ_trasy, id_przewodnik, typ_trasy);
 	}else{
-		printf("[%d][Przewodnik %d]: Prom nie znajduje się po naszej stronie: %d\n",typ_trasy, id_przewodnik, typ_trasy);
+		printf("%d [%d][Przewodnik %d]: Prom nie znajduje się po naszej stronie: %d\n",(int)time(NULL),typ_trasy, id_przewodnik, typ_trasy);
 	}
 	
 	// Dodaje liczbę osób czekających na konkretnej stronie
 	if(typ_trasy==1){
-		printf(YEL"----------------------trasa 1: przed wejściem 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"----------------------trasa 2: przed wejściem 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		printf(YEL"%d ----------------------trasa 1: przed wejściem 1: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_1);
+		printf(YEL"%d ----------------------trasa 2: przed wejściem 1: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_2);
 		shm_ptr->turysci_trasa_1 += liczba_w_grupie;
-		printf(YEL"--------------------------trasa 1: po wejściu 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"--------------------------trasa 2: po wejściu 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		printf(YEL"%d --------------------------trasa 1: po wejściu 1: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_1);
+		printf(YEL"%d --------------------------trasa 2: po wejściu 1: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_2);
 	}else if(typ_trasy==2){
-		printf(YEL"----------------------trasa 1: przed wejściem 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"----------------------trasa 2: przed wejściem 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		printf(YEL"%d ----------------------trasa 1: przed wejściem 2: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_1);
+		printf(YEL"%d ----------------------trasa 2: przed wejściem 2: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_2);
 		shm_ptr->turysci_trasa_2 += liczba_w_grupie;
-		printf(YEL"--------------------------trasa 1: po wejściu 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"--------------------------trasa 2: po wejściu 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		printf(YEL"%d --------------------------trasa 1: po wejściu 2: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_1);
+		printf(YEL"%d --------------------------trasa 2: po wejściu 2: %d\n"RESET,(int)time(NULL),shm_ptr->turysci_trasa_2);
 	}
 	semafor_operacja(semid_prom_check, 1);
 	
@@ -246,7 +246,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 				} 
 				else {
 					sleep(1);
-					printf("[%d][Przewodnik %d]: Wchodzę na prom jako pierwszy (miejsc zajętych: %d/%d)\n",typ_trasy, id_przewodnik, shm_ptr->prom_zajete, X3);
+					printf("%d [%d][Przewodnik %d]: Wchodzę na prom jako pierwszy (miejsc zajętych: %d/%d)\n",(int)time(NULL),typ_trasy, id_przewodnik, shm_ptr->prom_zajete, X3);
 					semafor_operacja(semid_turysta_wchodzenie, 1);
 					continue;
 				}
@@ -271,14 +271,14 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 					msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0);
 				
 					sleep(1);
-					printf("[%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d/%d) (1:%d 2:%d) (stan danej grupy: %d/%d)\n",typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, prom_liczba+1, liczba_w_grupie);
+					printf("%d [%d][Przewodnik %d]: Turysta %d wchodzi na prom (miejsc zajętych: %d/%d) (1:%d 2:%d) (stan danej grupy: %d/%d)\n",(int)time(NULL),typ_trasy, id_przewodnik, grupa[prom_liczba], shm_ptr->prom_zajete, X3, shm_ptr->turysci_trasa_1, shm_ptr->turysci_trasa_2, prom_liczba+1, liczba_w_grupie);
 					prom_liczba++;
 					semafor_operacja(semid_turysta_wchodzenie, 1); // Odblokujemy dostęp do pętli dla kolejnej grupy
 				}
 			} 
 			
 			if (prom_liczba == liczba_w_grupie){
-				printf("[Prom]: Wszystkie osoby z grupy przewodnika %d weszły na prom\n",id_przewodnik);
+				printf("%d [Prom]: Wszystkie osoby z grupy przewodnika %d weszły na prom\n",(int)time(NULL),id_przewodnik);
 				break;
 			}else if(shm_ptr->prom_zajete == X3){
 				break;
