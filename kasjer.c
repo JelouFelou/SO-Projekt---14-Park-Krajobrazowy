@@ -124,6 +124,10 @@ int main() {
 			wiek = (rand() % 80) + 1;
 			sleep(1);
 		
+			if(wiek < 8){
+				printf("[Kasjer %d] Turyści poniżej 8 roku życia nie płacą za bilet\n", id_kasjer);
+			}
+		
 	// ---- Przewodnik ----
 		
 		//3.1. Przekazuje turystę do przewodnika
