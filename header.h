@@ -89,6 +89,7 @@ typedef struct {
 	// Turysta
 	int liczba_turystow;
 	int turysta_opuszcza_park;
+	int liczba_vipow;
 	
 	//Przewodnik
 	int turysci_w_grupie;
@@ -147,6 +148,7 @@ SharedData* shm_init(int* shm_id){
 		// Turysta
 		shm_ptr->liczba_turystow=0;
 		shm_ptr->turysta_opuszcza_park=0;
+		shm_ptr->liczba_vipow=0;
 	
 		//Przewodnik
 		shm_ptr->turysci_w_grupie=0;
@@ -187,9 +189,17 @@ SharedData* shm_init(int* shm_id){
 
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
     if (typ_trasy == 1) {
+		printf(YEL"----------------------turysci trasa 1: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"----------------------turysci trasa 2: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
         shm_ptr->turysci_trasa_1--;
+		printf(YEL"--------------------------turysci trasa 1: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"--------------------------turysci trasa 2: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
     } else if (typ_trasy == 2) {
-        shm_ptr->turysci_trasa_2--;
+        printf(YEL"----------------------turysci trasa 1: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"----------------------turysci trasa 2: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		shm_ptr->turysci_trasa_2--;
+		printf(YEL"--------------------------turysci trasa 1: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"--------------------------turysci trasa 2: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
     }
 }
 

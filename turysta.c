@@ -51,6 +51,7 @@ int main() {
 	if(vip){
 		typ_trasy = (rand() % 2) + 1;
 		wiek = (rand() % 62) + 18;
+		shm_ptr->liczba_vipow++;
 	}
 	// Dla zwykłego turysty dane (typ trasy i wiek) zostaną nadane przez kasjera
 	
@@ -248,7 +249,7 @@ int main() {
 	
 	
 	shm_ptr->turysta_opuszcza_park++;
-	printf("%d/%d",shm_ptr->turysta_opuszcza_park,shm_ptr->liczba_turystow);
+	printf("%d/%d | liczba vipow: %d\n",shm_ptr->turysta_opuszcza_park,shm_ptr->liczba_turystow, shm_ptr->liczba_vipow);
 	shmdt(shm_ptr);
     return 0;
 }

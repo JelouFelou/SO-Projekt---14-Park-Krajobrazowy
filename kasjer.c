@@ -78,14 +78,14 @@ int main() {
             break;  // lub dokonaj odpowiednich czynności zamykających symulację
         }*/
 		
-		if(rola_kasjera==1 && shm_ptr->turysta_opuszcza_park==shm_ptr->liczba_turystow && shm_ptr->turysta_opuszcza_park!=0 && shm_ptr->liczba_turystow!=0){
+		/*if(rola_kasjera==1 && shm_ptr->turysta_opuszcza_park==shm_ptr->liczba_turystow && shm_ptr->turysta_opuszcza_park!=0 && shm_ptr->liczba_turystow!=0){
 			sleep(1);
 			printf("---18:00: Park zamyka się. Dziękujemy za odwiedziny w parku! ---\n");
 			shm_ptr->kasjer_glowny=2;
 			system("killall przewodnik");
 			system("killall prom");
 			system("killall kasjer");
-		}
+		}*/
 		
 		//1. Pobranie turysty z kolejki
         if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, KASJER, IPC_NOWAIT) == -1) {
@@ -197,6 +197,8 @@ void przedwczesne_wyjscie(int sig){
 	
 	// Turysta
 	shm_ptr->liczba_turystow=0;
+	shm_ptr->turysta_opuszcza_park=0;
+	shm_ptr->liczba_vipow=0;
 	
 	//Przewodnik
 	shm_ptr->turysci_w_grupie=0;

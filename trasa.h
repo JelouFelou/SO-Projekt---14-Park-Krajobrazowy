@@ -199,9 +199,17 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 	
 	// Dodaje liczbę osób czekających na konkretnej stronie
 	if(typ_trasy==1){
+		printf(YEL"----------------------trasa 1: przed wejściem 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"----------------------trasa 2: przed wejściem 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
 		shm_ptr->turysci_trasa_1 += liczba_w_grupie;
+		printf(YEL"--------------------------trasa 1: po wejściu 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"--------------------------trasa 2: po wejściu 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
 	}else if(typ_trasy==2){
+		printf(YEL"----------------------trasa 1: przed wejściem 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"----------------------trasa 2: przed wejściem 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
 		shm_ptr->turysci_trasa_2 += liczba_w_grupie;
+		printf(YEL"--------------------------trasa 1: po wejściu 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		printf(YEL"--------------------------trasa 2: po wejściu 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
 	}
 	semafor_operacja(semid_prom_check, 1);
 	
@@ -276,7 +284,7 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 				break;
 			}
 		}
-		printf("główne while: %d\n", id_przewodnik);
+		//printf("główne while: %d; czy %d < %d? czy prom odpłynął %d? Kierunek a typ trasy: %d/%d\n", id_przewodnik, prom_liczba, liczba_w_grupie, shm_ptr->prom_odplynal, shm_ptr->prom_kierunek, typ_trasy);
     }
 
 	

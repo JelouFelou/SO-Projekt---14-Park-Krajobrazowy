@@ -80,7 +80,7 @@ int main() {
 			wyczekuje=0;
 		}
 		
-		if((shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_2 > 0 && shm_ptr->turysci_trasa_1 == 0) || (shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_1 > 0 && shm_ptr->turysci_trasa_2 == 0)){
+		if(shm_ptr->prom_zajete==0 && ((shm_ptr->prom_kierunek==1 && shm_ptr->turysci_trasa_2 > 0 && shm_ptr->turysci_trasa_1 == 0) || (shm_ptr->prom_kierunek==2 && shm_ptr->turysci_trasa_1 > 0 && shm_ptr->turysci_trasa_2 == 0))){
 			shm_ptr->prom_odplynal=1;
 			printf(YEL"[%d][Prom %d] Otrzymałem informację, że po drugiej stronie znajdują się turyści2: %d\n"RESET,shm_ptr->prom_kierunek, id_prom, shm_ptr->turysci_trasa_1);
 			printf(BLU"[%d][Prom %d] Odpłynął z strony %d\n"RESET,shm_ptr->prom_kierunek,id_prom,shm_ptr->prom_kierunek);
