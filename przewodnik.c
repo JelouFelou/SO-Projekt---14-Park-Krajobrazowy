@@ -192,13 +192,10 @@ int main() {
 			case 1:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(czas_trasa);
-				printf("TRASA A 1\n");
 				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie, shm_ptr);
 				sleep(czas_trasa);
-				printf("TRASA B 1\n");
 				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer, shm_ptr);
 				sleep(czas_trasa);
-				printf("TRASA C 1\n");
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom_check, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty, shm_ptr);
 				sleep(czas_trasa);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);
@@ -206,13 +203,10 @@ int main() {
 			case 2:
 				printf("[%d][Przewodnik %d]: Jesteśmy przy kasach\n",przypisana_trasa, id_przewodnik);
 				sleep(czas_trasa);
-				printf("TRASA C 2\n");
 				TrasaC(IDkolejki, przypisana_trasa, semid_prom_check, semid_prom, semid_turysta_wchodzenie, semid_czekajaca_grupa, id_przewodnik, grupa, liczba_w_grupie, wiek_turysty, shm_ptr);
 				sleep(czas_trasa);
-				printf("TRASA B 2\n");
 				TrasaB(IDkolejki, przypisana_trasa, semid_wieza, id_przewodnik, grupa, wiek_turysty, liczba_w_grupie, wydluzenie, numer, shm_ptr);
 				sleep(czas_trasa);
-				printf("TRASA A 2\n");
 				TrasaA(IDkolejki, przypisana_trasa, semid_most, semid_most_wchodzenie, id_przewodnik, grupa, liczba_w_grupie, wydluzenie, shm_ptr);
 				sleep(czas_trasa);
 				printf("[%d][Przewodnik %d]: Wróciliśmy do kas\n",przypisana_trasa, id_przewodnik);

@@ -132,12 +132,14 @@ SharedData* shm_init(int* shm_id){
 	
     *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
     if (*shm_id == -1) {
+		printf(RED"\nSHMGET\n"RESET);
         perror("shmget");
         exit(1);
     }
 
     SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
     if (shm_ptr == (void *)-1) {
+		printf(RED"\nSHMMAT\n"RESET);
         perror("shmat");
         exit(1);
     }	
@@ -154,7 +156,7 @@ SharedData* shm_init(int* shm_id){
 		//Przewodnik
 		shm_ptr->turysci_w_grupie=0;
 		shm_ptr->ilosc_przewodnikow=0;
-		shm_ptr->nr_przewodnika=1;
+		shm_ptr->nr_przewodnika=0;
 	
 		// Most
 		shm_ptr->liczba_osob_na_moscie=0;

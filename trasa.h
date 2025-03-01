@@ -102,9 +102,6 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 		}
 	}
 	printf("[%d][Przewodnik %d]: Możemy w takim wypadku iść dalej.\n",typ_trasy, id_przewodnik);
-	
-	// Zwolnienie segmentu pamięci współdzielonej
-	shmdt(shm_ptr);
 }
 
 
@@ -118,6 +115,7 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 	if(wydluzenie==1){
 		czas *= 1.5;
 	}
+	
 	shm_ptr->wieza_sygnal[numer_wieza] = 0;
 	signal(SIGCHLD, handler_wieza_sygnal);
 	
@@ -160,9 +158,6 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 		}
 	}
     printf("[%d][Przewodnik %d]: Wszyscy zeszli z wieży, możemy w takim wypadku iść dalej.\n",typ_trasy, id_przewodnik);
-	
-	// Zwolnienie segmentu pamięci współdzielonej
-	shmdt(shm_ptr);
 }
 
 
@@ -293,9 +288,6 @@ void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, 
 		}
 	}
     printf("[%d][Przewodnik %d]: Wszyscy z mojej grupy przepłynęli promem. Kontynuujemy wycieczkę.\n",typ_trasy, id_przewodnik);
-
-	// Zwolnienie segmentu pamięci współdzielonej
-    shmdt(shm_ptr);
 }
 
 // --- Funkcje pomocnicze

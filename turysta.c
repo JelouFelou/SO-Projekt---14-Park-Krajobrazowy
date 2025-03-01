@@ -10,12 +10,12 @@
 #include "header.h"
 
 void przedwczesne_wyjscie(int);
-void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
-void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
-void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta);
-void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most);
-void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy);
-void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie, int semid_prom_check);
+void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr);
+void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr);
+void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr);
+void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most, SharedData *shm_ptr);
+void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy, SharedData *shm_ptr);
+void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie, int semid_prom_check, SharedData *shm_ptr);
 
 int numer=0;
 int wiek = 0;
@@ -33,15 +33,6 @@ int main() {
 	int vip = (rand() % 100 == 47);
 	int typ_trasy = 0;
 	int czas_trasa=0;
-
-	
-	
-	while(1){
-		if (!czy_istnieje(id_kasjer)) continue;
-		else if (!czy_istnieje(id_turysta)) continue;
-		else break;
-	}
-	
 	
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
@@ -182,14 +173,14 @@ int main() {
 		// Wycieczka zależna od typu trasy
 		switch(typ_trasy){
 			case(1):
-				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
+				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
 				break;
 			case(2):
-				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta);
-				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta);
+				TurystaProm(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
+				TurystaWieza(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
+				TurystaMost(IDkolejki, id_przewodnik, wiek, id_turysta, shm_ptr);
 				break;
 		}
 		
@@ -207,14 +198,14 @@ int main() {
 		czas_trasa = rand() % 2 + 1;
 		switch(typ_trasy){
 			case(1):
-				VipMost(IDkolejki, wiek, id_turysta, typ_trasy, semid_most_wchodzenie, semid_most);
-				VipWieza(IDkolejki, wiek, id_turysta, typ_trasy);
-				VipProm(IDkolejki, wiek, id_turysta, typ_trasy, semid_turysta_wchodzenie, semid_prom_check);
+				VipMost(IDkolejki, wiek, id_turysta, typ_trasy, semid_most_wchodzenie, semid_most, shm_ptr);
+				VipWieza(IDkolejki, wiek, id_turysta, typ_trasy, shm_ptr);
+				VipProm(IDkolejki, wiek, id_turysta, typ_trasy, semid_turysta_wchodzenie, semid_prom_check, shm_ptr);
 				break;
 			case(2):
-				VipProm(IDkolejki, wiek, id_turysta, typ_trasy, semid_turysta_wchodzenie, semid_prom_check);
-				VipWieza(IDkolejki, wiek, id_turysta, typ_trasy);
-				VipMost(IDkolejki, wiek, id_turysta, typ_trasy, semid_most_wchodzenie, semid_most);
+				VipProm(IDkolejki, wiek, id_turysta, typ_trasy, semid_turysta_wchodzenie, semid_prom_check, shm_ptr);
+				VipWieza(IDkolejki, wiek, id_turysta, typ_trasy, shm_ptr);
+				VipMost(IDkolejki, wiek, id_turysta, typ_trasy, semid_most_wchodzenie, semid_most, shm_ptr);
 				break;
 		}
 	}
@@ -264,9 +255,7 @@ void przedwczesne_wyjscie(int sig_n){
 }
 
 // --- Funkcje odpowiedzialne za wycieczkę turysty
-void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr){
 	struct komunikat kom;
 	
 	float czas = 0;
@@ -300,13 +289,9 @@ void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
 	if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
         perror("msgsnd failed (Most - DONE)");
     }
-	
-	shmdt(shm_ptr);
 }
 
-void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr){
 	struct komunikat kom;
 	
 	float czas = 0;
@@ -383,13 +368,9 @@ void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
     if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
         perror("msgsnd failed (Wieża - DONE)");
     }
-	
-	shmdt(shm_ptr);
 }
 
-void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr){
 	struct komunikat kom;
 	
 //1. Turysta czeka na sygnał od przewodnika
@@ -433,16 +414,11 @@ void TurystaProm(int IDkolejki, int id_przewodnik, int wiek, int id_turysta){
     if (msgsnd(IDkolejki, &kom, strlen(kom.mtext) + 1, 0) == -1) {
         perror("msgsnd failed (Prom - DONE)");
     }
-
-	shmdt(shm_ptr);
 }
 
 
 // --- Funkcje odpowiedzialne za wycieczkę vipa
-void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
-	
+void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_most_wchodzenie, int semid_most, SharedData *shm_ptr){
 	float czas = rand() % 10 + 1;
 	printf("[VIP | %d][Turysta %d]: Widzi most\n",typ_trasy, id_turysta);
 	
@@ -481,13 +457,9 @@ void VipMost(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_m
 	}
 	
 	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
-	shmdt(shm_ptr);
 }
 
-void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
-	
+void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy, SharedData *shm_ptr){	
 	float czas = rand() % 10 + 1;
 	
 	printf("[VIP | %d][Turysta %d]: Widzę wieże...\n",typ_trasy, id_turysta);
@@ -515,12 +487,9 @@ void VipWieza(int IDkolejki, int wiek, int id_turysta, int typ_trasy){
 	
 	sleep(1);
 	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
-	shmdt(shm_ptr);
 }
 
-void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie, int semid_prom_check){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_turysta_wchodzenie, int semid_prom_check, SharedData *shm_ptr){
 	struct komunikat kom;
 	
 	int wydluzenie=0;
@@ -591,5 +560,4 @@ void VipProm(int IDkolejki, int wiek, int id_turysta, int typ_trasy, int semid_t
     }
 	
 	printf("[VIP | %d][Turysta %d]: Mogę w takim wypadku iść dalej\n",typ_trasy, id_turysta);
-	shmdt(shm_ptr);
 }
