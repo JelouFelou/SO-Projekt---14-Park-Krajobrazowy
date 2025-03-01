@@ -14,10 +14,7 @@ void handler_wieza_sygnal(int);
 
 
 // -------Most Wiszący-------
-void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodzenie, int id_przewodnik, int grupa[], int liczba_w_grupie, int wydluzenie) {
-	// Inicjalizacja pamięci współdzielonej
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodzenie, int id_przewodnik, int grupa[], int liczba_w_grupie, int wydluzenie, SharedData *shm_ptr) {
 	struct komunikat kom;
 	int i = 0;
 	int most_przewodnik=0;
@@ -112,10 +109,7 @@ void TrasaA(int IDkolejki, int typ_trasy, int semid_most, int semid_most_wchodze
 
 
 // -------Wieża Widokowa-------
-void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie, int wydluzenie, int numer) {
-	// Inicjalizacja pamięci współdzielonej
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, int grupa[], int wiek_turysty[], int liczba_w_grupie, int wydluzenie, int numer, SharedData *shm_ptr) {
 	struct komunikat kom;
 	
 	int numer_wieza = numer;
@@ -173,10 +167,7 @@ void TrasaB(int IDkolejki, int typ_trasy, int semid_wieza, int id_przewodnik, in
 
 
 // -------Płynięcie promem-------
-void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, int semid_turysta_wchodzenie, int semid_czekajaca_grupa, int id_przewodnik, int grupa[], int liczba_w_grupie, int wiek_turysty[]) {
-	// Inicjalizacja pamięci współdzielonej
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
+void TrasaC(int IDkolejki, int typ_trasy, int semid_prom_check, int semid_prom, int semid_turysta_wchodzenie, int semid_czekajaca_grupa, int id_przewodnik, int grupa[], int liczba_w_grupie, int wiek_turysty[], SharedData *shm_ptr) {
 	struct komunikat kom;
 	
 	int prom_przewodnik=0; // 0 - jeszcze nie wszedł, 1 - wszedł, 2 - przepłynął

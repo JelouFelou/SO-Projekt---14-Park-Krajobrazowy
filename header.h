@@ -126,6 +126,7 @@ typedef struct {
 
 // Inicjalizacja 
 SharedData* shm_init(int* shm_id){
+	printf("%d shm_init",(int)time(NULL));
 	// Tworzymy segment pamięci współdzielonej
     key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
 	
