@@ -9,6 +9,8 @@
 #include <string.h>
 #include "header.h"
 
+SharedData *global_shm_ptr = 0;
+
 void przedwczesne_wyjscie(int);
 void TurystaMost(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr);
 void TurystaWieza(int IDkolejki, int id_przewodnik, int wiek, int id_turysta, SharedData *shm_ptr);
@@ -37,6 +39,8 @@ int main() {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
+	global_shm_ptr = shm_ptr;
+	
 	
 	// Jeśli turysta jest VIP-em – ustawiamy losowo trasę oraz wiek
 	if(vip){
@@ -113,7 +117,7 @@ int main() {
 	arg.val = 3;
 		semctl(semid_wejscie_do_parku, 0, SETVAL, arg);
 	
-	int wejscie = (rand() % 15) + 1;
+	int wejscie = (rand() % 15) + 3;
 	semafor_operacja(semid_wejscie_do_parku, -1);
 	sleep(wejscie);
 	semafor_operacja(semid_wejscie_do_parku, 1);
@@ -247,10 +251,8 @@ int main() {
 
 
 void przedwczesne_wyjscie(int sig_n){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
 	printf("[Turysta] przedwcześnie opuszcza park\n");
-	shm_ptr->turysta_opuszcza_park++;
+	global_shm_ptr->turysta_opuszcza_park++;
     exit(1);
 }
 

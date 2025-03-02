@@ -29,6 +29,7 @@ int main() {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
+	global_shm_ptr = shm_ptr;
 	
 	if(shm_ptr->ilosc_przewodnikow==P){
 		printf("W danej chwili może być uruchomionych max %d przewodników\n",P);
@@ -308,9 +309,7 @@ void awaryjne_wyjscie(int sig_n) {
     extern int semid_turysta_most, semid_turysta_wieza, semid_turysta_prom;
 	extern int semid_przewodnik_most, semid_przewodnik_prom, semid_przewodnik_wieza;
     
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
-	shm_ptr->ilosc_przewodnikow--;
+	global_shm_ptr->ilosc_przewodnikow--;
 
     struct komunikat kom;
 
@@ -343,21 +342,18 @@ void rozpoczecie_wycieczki(int sig_n){
 }
 
 void przedwczesne_wyjscie(int sig_n){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
-	
 	int id_przewodnik = getpid();
-	if(shm_ptr->kasjer_glowny==2){
+	if(global_shm_ptr->kasjer_glowny==2){
 		printf("[Przewodnik %d] opuszcza park po całym dniu ciężkiej pracy\n", id_przewodnik);
 	}else{
 		printf("[Przewodnik %d] przedwcześnie opuszcza park\n", id_przewodnik);
 	}
 	
-	shm_ptr->ilosc_przewodnikow--;
+	global_shm_ptr->ilosc_przewodnikow--;
 	for (int i = 0; i < liczba_w_grupie; i++){
 		kill(grupa[i], SIGTERM);
 	}
-	shmdt(shm_ptr);
+	shmdt(global_shm_ptr);
     exit(1);
 }
 

@@ -10,6 +10,8 @@
 #include <time.h>
 #include "header.h"
 
+SharedData *global_shm_ptr = 0;
+
 void przedwczesne_wyjscie(int);
 int sygnal=0;
 
@@ -34,6 +36,7 @@ int main() {
 	// Inicjalizacja pamięci współdzielonej
 	int shm_id;
     SharedData *shm_ptr = shm_init(&shm_id);
+	global_shm_ptr = shm_ptr;
 
 	if(N<=0 || M<=0 || P<=0 || X1<=0 || X2<=0 || X3<=0 || KLATKA<=0 || MAX<=0){
 		printf("N, M, P, X1, X2, X3, KLATKA czy MAX nie mogą być mniejsze bądź równe 0\n");
@@ -78,14 +81,14 @@ int main() {
             break;  // lub dokonaj odpowiednich czynności zamykających symulację
         }*/
 		
-		/*if(rola_kasjera==1 && shm_ptr->turysta_opuszcza_park==shm_ptr->liczba_turystow && shm_ptr->turysta_opuszcza_park!=0 && shm_ptr->liczba_turystow!=0){
+		if(rola_kasjera==1 && shm_ptr->turysta_opuszcza_park==shm_ptr->liczba_turystow && shm_ptr->turysta_opuszcza_park!=0 && shm_ptr->liczba_turystow!=0){
 			sleep(1);
 			printf("---18:00: Park zamyka się. Dziękujemy za odwiedziny w parku! ---\n");
 			shm_ptr->kasjer_glowny=2;
 			system("killall przewodnik");
 			system("killall prom");
 			system("killall kasjer");
-		}*/
+		}
 		
 		//1. Pobranie turysty z kolejki
         if (msgrcv(IDkolejki, (struct msgbuf *)&kom, MAX, KASJER, IPC_NOWAIT) == -1) {
@@ -189,57 +192,55 @@ int main() {
 }
 
 void przedwczesne_wyjscie(int sig){
-	int shm_id;
-    SharedData *shm_ptr = shm_init(&shm_id);
 	int id_kasjer = getpid();
 	
-	if(shm_ptr->kasjer_glowny==2){
+	if(global_shm_ptr->kasjer_glowny==2){
 		printf("[Kasjer %d] opuszcza park po całym dniu ciężkiej pracy\n", id_kasjer);
 	}else{
 		printf("[Kasjer %d] przedwcześnie opuszcza park\n", id_kasjer);
 	}
 	
 	// Turysta
-	shm_ptr->liczba_turystow=0;
-	shm_ptr->turysta_opuszcza_park=0;
-	shm_ptr->liczba_vipow=0;
+	global_shm_ptr->liczba_turystow=0;
+	global_shm_ptr->turysta_opuszcza_park=0;
+	global_shm_ptr->liczba_vipow=0;
 	
 	//Przewodnik
-	shm_ptr->turysci_w_grupie=0;
-	shm_ptr->ilosc_przewodnikow=0;
-	shm_ptr->nr_przewodnika=1;
+	global_shm_ptr->turysci_w_grupie=0;
+	global_shm_ptr->ilosc_przewodnikow=0;
+	global_shm_ptr->nr_przewodnika=1;
 	
 	// Most
-	shm_ptr->liczba_osob_na_moscie=0;
-	shm_ptr->most_kierunek=0;
-	shm_ptr->czekajacy_przewodnicy_most=0;
-	shm_ptr->przewodnicy_most=0;
+	global_shm_ptr->liczba_osob_na_moscie=0;
+	global_shm_ptr->most_kierunek=0;
+	global_shm_ptr->czekajacy_przewodnicy_most=0;
+	global_shm_ptr->przewodnicy_most=0;
 	
 	// Wieża
-	shm_ptr->liczba_osob_na_wiezy=0;
-	shm_ptr->pierwsza_klatka=0;
-	shm_ptr->druga_klatka=0;
+	global_shm_ptr->liczba_osob_na_wiezy=0;
+	global_shm_ptr->pierwsza_klatka=0;
+	global_shm_ptr->druga_klatka=0;
 	for(int i=0; i<P; i++){
-		shm_ptr->wieza_sygnal[i]=0;
+		global_shm_ptr->wieza_sygnal[i]=0;
 	}
 	
 	// Prom
-	shm_ptr->turysci_trasa_1=0;
-	shm_ptr->turysci_trasa_2=0;
-	shm_ptr->prom_kierunek=0;
-	shm_ptr->prom_zajete=0;
-	shm_ptr->prom_odplynal=0;
+	global_shm_ptr->turysci_trasa_1=0;
+	global_shm_ptr->turysci_trasa_2=0;
+	global_shm_ptr->prom_kierunek=0;
+	global_shm_ptr->prom_zajete=0;
+	global_shm_ptr->prom_odplynal=0;
 	
 	// Wypisywanie informacji o symulacji tylko raz
-	shm_ptr->prom_istnieje=0;
-	shm_ptr->przewodnik_istnieje=0;
-	shm_ptr->turysta_istnieje=0;
-	shm_ptr->kasjer_istnieje=0;
-	shm_ptr->kasjer_glowny=0;
+	global_shm_ptr->prom_istnieje=0;
+	global_shm_ptr->przewodnik_istnieje=0;
+	global_shm_ptr->turysta_istnieje=0;
+	global_shm_ptr->kasjer_istnieje=0;
+	global_shm_ptr->kasjer_glowny=0;
 
 	// Następne wywołanie kasjera zinicjalizuje wszystko na nowo
-	shm_ptr->init=0;
+	global_shm_ptr->init=0;
 	
-    shmdt(shm_ptr);
+    shmdt(global_shm_ptr);
 	exit(1);
 }

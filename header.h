@@ -126,26 +126,26 @@ typedef struct {
 
 // Inicjalizacja 
 SharedData* shm_init(int* shm_id){
-	printf("%d shm_init",(int)time(NULL));
+	//printf("%d shm_init",(int)time(NULL));
 	// Tworzymy segment pamięci współdzielonej
     key_t key = ftok("header.h", 1);  // Tworzymy unikalny klucz
 	
     *shm_id = shmget(key, sizeof(SharedData), IPC_CREAT | 0600);
     if (*shm_id == -1) {
-		printf(RED"\nSHMGET\n"RESET);
+		//printf(RED"\nSHMGET\n"RESET);
         perror("shmget");
         exit(1);
     }
 
     SharedData *shm_ptr = (SharedData *)shmat(*shm_id, NULL, 0);
     if (shm_ptr == (void *)-1) {
-		printf(RED"\nSHMMAT\n"RESET);
+		//printf(RED"\nSHMMAT\n"RESET);
         perror("shmat");
         exit(1);
     }	
 	
 	if(shm_ptr->init != 1){
-		printf(RED"\n\n---------WYZEROWYWANIE UWAGA------------\n\n"RESET);
+		//printf(RED"\n\n---------WYZEROWYWANIE UWAGA------------\n\n"RESET);
 		shm_ptr->init = 1;
 		
 		// Turysta
@@ -192,17 +192,17 @@ SharedData* shm_init(int* shm_id){
 
 void LiczbaTurysciTrasy(int typ_trasy, SharedData *shm_ptr) {
     if (typ_trasy == 1) {
-		printf(YEL"----------------------turysci trasa 1: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"----------------------turysci trasa 2: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		//printf(YEL"----------------------turysci trasa 1: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		//printf(YEL"----------------------turysci trasa 2: przed usunieciem 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
         shm_ptr->turysci_trasa_1--;
-		printf(YEL"--------------------------turysci trasa 1: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"--------------------------turysci trasa 2: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		//printf(YEL"--------------------------turysci trasa 1: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		//printf(YEL"--------------------------turysci trasa 2: po usunieciu 1: %d\n"RESET,shm_ptr->turysci_trasa_2);
     } else if (typ_trasy == 2) {
-        printf(YEL"----------------------turysci trasa 1: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"----------------------turysci trasa 2: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
+        //printf(YEL"----------------------turysci trasa 1: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		//printf(YEL"----------------------turysci trasa 2: przed usunieciem 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
 		shm_ptr->turysci_trasa_2--;
-		printf(YEL"--------------------------turysci trasa 1: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
-		printf(YEL"--------------------------turysci trasa 2: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
+		//printf(YEL"--------------------------turysci trasa 1: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_1);
+		//printf(YEL"--------------------------turysci trasa 2: po usunieciu 2: %d\n"RESET,shm_ptr->turysci_trasa_2);
     }
 }
 
